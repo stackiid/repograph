@@ -1,0 +1,28 @@
+@import 'tailwindcss';
+@import './tokens.css';
+
+html { color-scheme: dark; }
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+:focus-visible {
+  outline: 2px solid var(--color-accent-2);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+.skip-link {
+  position: absolute; left: var(--space-4); top: -100px; z-index: var(--z-overlay);
+  background: var(--color-raised); color: var(--color-text);
+  padding: var(--space-2) var(--space-4); border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+.skip-link:focus { top: var(--space-4); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
