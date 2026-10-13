@@ -1,9 +1,21 @@
 import { faArrowUpRightFromSquare, faProjectDiagram } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { PROJECT } from './config/project'
+import { lazy, Suspense, useState } from 'react'
 import { ImportScreen } from './features/import-project/ImportScreen'
 
+// React Flow is only needed once the workspace opens, so it loads on demand.
+const Workspace = lazy(() => import('./features/graph-explorer/Workspace').then((m) => ({ default: m.Workspace })))
+
 export function App() {
+  const [view, setView] = useState<'import' | 'workspace'>('import')
+  if (view === 'workspace') {
+    return (
+      <Suspense fallback={<p role="status" className="grid h-dvh place-items-center bg-bg text-sm text-text-2">Loading workspace</p>}>
+        <Workspace onExit={() => setView('import')} />
+      </Suspense>
+    )
+  }
   return (
     <div className="min-h-screen bg-bg text-text">
       <a href="#main" className="skip-link">Skip to content</a>
@@ -26,7 +38,7 @@ export function App() {
         </div>
       </header>
       <main id="main">
-        <ImportScreen />
+        <ImportScreen onLoadDemo={() => setView('workspace')} />
       </main>
     </div>
   )

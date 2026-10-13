@@ -18,7 +18,7 @@ const FACTS = [
   },
 ]
 
-export function ImportScreen() {
+export function ImportScreen({ onLoadDemo }: { onLoadDemo: () => void }) {
   return (
     <div className="mx-auto max-w-6xl px-5 sm:px-8">
       <section className="grid gap-12 py-14 md:grid-cols-[1.05fr_1fr] md:items-start md:py-24">
@@ -31,7 +31,19 @@ export function ImportScreen() {
             depends on it, with the source line as evidence.
           </p>
         </div>
-        <DropZone />
+        <div>
+          <DropZone />
+          <div className="mt-6 border-t border-border pt-5">
+            <button
+              type="button"
+              onClick={onLoadDemo}
+              className="rounded-sm border border-accent px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-raised"
+            >
+              Try the sample project
+            </button>
+            <p className="mt-2 text-sm text-text-muted">Opens the workspace with labeled demo data. No files are read.</p>
+          </div>
+        </div>
       </section>
 
       <section className="grid gap-px border-y border-border bg-border md:grid-cols-3" aria-label="Privacy and limits">
@@ -43,7 +55,7 @@ export function ImportScreen() {
         ))}
       </section>
       <footer className="py-8 text-sm text-text-muted">
-        Version 0.0.1. Analysis and graph views are under construction.
+        Version 0.0.1. The workspace runs on demo data until archive reading and analysis ship.
       </footer>
     </div>
   )
