@@ -1,3 +1,6 @@
+import { useMemo, useState } from 'react'
+import { DEFAULT_IGNORE_PATTERNS, parsePatterns } from '../../core/archive/ignore'
+import type { IngestResult } from '../../core/archive/ingest'
 import { DropZone } from './DropZone'
 
 const FACTS = [
@@ -18,7 +21,16 @@ const FACTS = [
   },
 ]
 
-export function ImportScreen({ onLoadDemo }: { onLoadDemo: () => void }) {
+interface Props {
+  onLoadDemo: () => void
+  onIngested: (name: string, result: IngestResult) => void
+}
+
+const DEFAULT_TEXT = DEFAULT_IGNORE_PATTERNS.join('\n')
+
+export function ImportScreen({ onLoadDemo, onIngested }: Props) {
+  const [exclusionText, setExclusionText] = useState(DEFAULT_TEXT)
+  const ignorePatterns = useMemo(() => parsePatterns(exclusionText), [exclusionText])
   return (
     <div className="mx-auto max-w-6xl px-5 sm:px-8">
       <section className="grid gap-12 py-14 md:grid-cols-[1.05fr_1fr] md:items-start md:py-24">
@@ -32,7 +44,28 @@ export function ImportScreen({ onLoadDemo }: { onLoadDemo: () => void }) {
           </p>
         </div>
         <div>
-          <DropZone />
+          <DropZone ignorePatterns={ignorePatterns} onIngested={onIngested} />
+          <details className="mt-4 rounded-md border border-border bg-surface">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-medium">
+              Excluded folders and files <span className="text-text-muted">({ignorePatterns.length} rules)</span>
+            </summary>
+            <div className="border-t border-border p-4">
+              <label htmlFor="exclusions" className="text-sm text-text-2">
+                One rule per line. A name matches any folder or file with that exact name at any depth. Use * inside a name, as in *.min.js. Rules apply to the next import.
+              </label>
+              <textarea
+                id="exclusions"
+                value={exclusionText}
+                onChange={(e) => setExclusionText(e.target.value)}
+                rows={8}
+                spellCheck={false}
+                className="mt-2 w-full rounded-sm border border-border-strong bg-bg p-3 font-mono text-[13px] text-text"
+              />
+              <button type="button" onClick={() => setExclusionText(DEFAULT_TEXT)} className="mt-2 text-sm text-accent underline underline-offset-4">
+                Restore default rules
+              </button>
+            </div>
+          </details>
           <div className="mt-6 border-t border-border pt-5">
             <button
               type="button"

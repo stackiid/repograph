@@ -1,6 +1,7 @@
 import { useMemo, type Ref } from 'react'
 import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { FileTree } from '../../components/file-tree/FileTree'
 import type { FileEntry, RelationshipType } from '../../core/types'
 
 interface Props {
@@ -26,11 +27,7 @@ const TYPE_LABELS: { type: RelationshipType; label: string; hint: string }[] = [
 ]
 
 export function Sidebar({ files, visibleIds, selectedId, query, onQuery, extensions, enabledExtensions, onToggleExtension, types, onToggleType, focusName, onClearFocus, onSelectFile, searchRef }: Props) {
-  const groups = useMemo(() => {
-    const map = new Map<string, FileEntry[]>()
-    for (const f of files) if (visibleIds.has(f.id)) (map.get(f.parentDir) ?? map.set(f.parentDir, []).get(f.parentDir)!).push(f)
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
-  }, [files, visibleIds])
+  const visibleFiles = useMemo(() => files.filter((f) => visibleIds.has(f.id)), [files, visibleIds])
 
   return (
     <div className="flex h-full flex-col gap-5 overflow-y-auto p-4">
@@ -85,34 +82,14 @@ export function Sidebar({ files, visibleIds, selectedId, query, onQuery, extensi
         ))}
       </fieldset>
 
-      <nav aria-label="File list">
+      <section>
         <h2 className="mb-1.5 text-sm font-medium">Files ({visibleIds.size} of {files.length})</h2>
-        {groups.length === 0 ? (
+        {visibleIds.size === 0 ? (
           <p className="rounded-sm border border-border p-3 text-sm text-text-2">No files match. Clear the search or turn a file type back on.</p>
         ) : (
-          groups.map(([dir, list]) => (
-            <div key={dir} className="mb-3">
-              <p className="mb-1 font-mono text-[11px] text-text-muted">{dir || '.'}</p>
-              <ul>
-                {list.map((f) => (
-                  <li key={f.id}>
-                    <button
-                      type="button"
-                      onClick={() => onSelectFile(f.id)}
-                      aria-current={selectedId === f.id ? 'true' : undefined}
-                      className={`flex min-h-8 w-full items-center rounded-sm px-2 text-left font-mono text-[13px] transition-colors ${
-                        selectedId === f.id ? 'bg-raised text-accent' : 'text-text-2 hover:bg-surface hover:text-text'
-                      }`}
-                    >
-                      {f.baseName}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
+          <FileTree label="File list" files={visibleFiles} selectedId={selectedId} onSelect={onSelectFile} expandAll={query.trim() !== ''} />
         )}
-      </nav>
+      </section>
     </div>
   )
 }
