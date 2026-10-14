@@ -4,6 +4,8 @@ import { DEFAULT_IGNORE_PATTERNS } from '../archive/ignore'
 import { DEFAULT_LIMITS } from '../archive/limits'
 import { extractModuleRefs } from '../parsers/moduleRefs'
 import { resolveImport } from '../resolver/resolveImport'
+import { findCycles } from '../graph/algorithms'
+import { aggregateEdges, runtimeEdges } from '../graph/model'
 import { graphFiles, projectFromPipeline } from './project'
 import { runPipeline } from './pipeline'
 
@@ -145,5 +147,25 @@ describe('runPipeline on a fixture archive', () => {
     const ids = graphFiles(project.files, project.relationships).map((f) => f.path)
     expect(ids).toContain('src/style.css')
     expect(ids).not.toContain('package.json')
+  })
+})
+
+describe('cycles in an analyzed archive', () => {
+  const build = (files: Record<string, string>) => {
+    const zip = zipSync(Object.fromEntries(Object.entries(files).map(([k, v]) => [k, strToU8(v)])))
+    const project = projectFromPipeline('p', runPipeline(zip, { limits: DEFAULT_LIMITS, ignorePatterns: DEFAULT_IGNORE_PATTERNS }))
+    const ids = graphFiles(project.files, project.relationships).map((f) => f.id)
+    return { ids, edges: aggregateEdges(project.relationships) }
+  }
+
+  it('detects a runtime cycle between two files', () => {
+    const { ids, edges } = build({ 'src/a.ts': "import './b'", 'src/b.ts': "import './a'", 'src/c.ts': 'export {}' })
+    expect(findCycles(ids, runtimeEdges(edges))).toEqual([['src/a.ts', 'src/b.ts']])
+  })
+
+  it('does not report a cycle that exists only through a type-only import', () => {
+    const { ids, edges } = build({ 'src/a.ts': "import { b } from './b'", 'src/b.ts': "import type { A } from './a'" })
+    expect(findCycles(ids, edges)).toHaveLength(1)
+    expect(findCycles(ids, runtimeEdges(edges))).toEqual([])
   })
 })

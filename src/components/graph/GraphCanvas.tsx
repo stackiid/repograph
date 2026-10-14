@@ -4,15 +4,17 @@ import { faExpand, faMinus, faPlus, faRotateLeft } from '@fortawesome/free-solid
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import '@xyflow/react/dist/style.css'
 import { prefersReducedMotion } from '../../hooks/useMediaQuery'
-import { FileNode, type FileNodeType } from './FileNode'
+import { FileNode } from './FileNode'
+import { LabelNode } from './LabelNode'
+import type { AppNode } from './types'
 
-const nodeTypes = { file: FileNode }
+const nodeTypes = { file: FileNode, label: LabelNode }
 
 interface Props {
-  nodes: FileNodeType[]
+  nodes: AppNode[]
   edges: Edge[]
   fitKey: string
-  onNodesChange: (changes: NodeChange<FileNodeType>[]) => void
+  onNodesChange: (changes: NodeChange<AppNode>[]) => void
   onEdgesChange: (changes: EdgeChange<Edge>[]) => void
   onPaneClick: () => void
   onResetLayout: () => void

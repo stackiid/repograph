@@ -32,6 +32,8 @@ export interface AggregatedEdge {
   sourceId: string
   targetId: string
   type: RelationshipType
+  /** True when every statement behind this edge is a type-only import or export. */
+  typeOnly: boolean
   relationships: Relationship[]
 }
 
@@ -42,9 +44,11 @@ export function aggregateEdges(relationships: Relationship[]): AggregatedEdge[] 
     const id = `${rel.sourceId}->${rel.targetId}:${rel.type}`
     const existing = byId.get(id)
     if (existing) existing.relationships.push(rel)
-    else byId.set(id, { id, sourceId: rel.sourceId, targetId: rel.targetId, type: rel.type, relationships: [rel] })
+    else byId.set(id, { id, sourceId: rel.sourceId, targetId: rel.targetId, type: rel.type, typeOnly: false, relationships: [rel] })
   }
-  return [...byId.values()]
+  const edges = [...byId.values()]
+  for (const e of edges) e.typeOnly = e.relationships.every((r) => r.typeOnly === true)
+  return edges
 }
 
 export interface GraphFilter {
@@ -91,4 +95,9 @@ export function neighborIds(nodeId: string, edges: AggregatedEdge[]): Set<string
     if (e.targetId === nodeId) out.add(e.sourceId)
   }
   return out
+}
+
+/** Edges that exist at runtime. A type-only import is erased by the compiler, so it cannot form a runtime cycle. */
+export function runtimeEdges(edges: AggregatedEdge[]): AggregatedEdge[] {
+  return edges.filter((e) => !e.typeOnly)
 }

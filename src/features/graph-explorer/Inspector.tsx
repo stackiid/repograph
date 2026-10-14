@@ -1,4 +1,4 @@
-import { faBullseye, faFilter } from '@fortawesome/free-solid-svg-icons'
+import { faBullseye, faCode, faFilter, faRoute } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { formatBytes } from '../../core/archive/limits'
 import type { AggregatedEdge, GraphIndex } from '../../core/graph/model'
@@ -14,16 +14,25 @@ interface Props {
   onSelectFile: (id: string) => void
   onCenter: (id: string) => void
   onToggleFocus: (id: string) => void
+  /** True when source text is available for line navigation. */
+  canPreview: boolean
+  onPreview: (fileId: string, line?: number) => void
+  pathStart: string | null
+  onStartPath: (id: string) => void
+  onTracePath: (toId: string) => void
+  onClearPath: () => void
 }
 
 const RESOLUTION_LABEL = { resolved: 'local', external: 'package', unresolved: 'unresolved' } as const
 const TYPE_LABEL = { import: 'import', reexport: 're-export' } as const
 
-function Evidence({ rel, path }: { rel: Relationship; path: string }) {
+function Evidence({ rel, path, onOpen }: { rel: Relationship; path: string; onOpen?: (fileId: string, line?: number) => void }) {
+  const text = `${path}:${rel.line ?? '?'}`
+  if (!onOpen) return <span className="font-mono text-[12px] text-text-muted">{text}</span>
   return (
-    <span className="font-mono text-[12px] text-text-muted">
-      {path}:{rel.line ?? '?'}
-    </span>
+    <button type="button" onClick={() => onOpen(path, rel.line)} aria-label={`View ${path} at line ${rel.line ?? 'unknown'}`} className="break-all text-left font-mono text-[12px] text-accent-2 underline underline-offset-4">
+      {text}
+    </button>
   )
 }
 
@@ -36,7 +45,8 @@ function Section({ title, count, children }: { title: string; count: number; chi
   )
 }
 
-export function Inspector({ index, edges, selection, focusId, onSelectFile, onCenter, onToggleFocus }: Props) {
+export function Inspector({ index, edges, selection, focusId, onSelectFile, onCenter, onToggleFocus, canPreview, onPreview, pathStart, onStartPath, onTracePath, onClearPath }: Props) {
+  const open = canPreview ? onPreview : undefined
   if (!selection) {
     return (
       <div className="p-5 text-sm text-text-2">
@@ -61,7 +71,7 @@ export function Inspector({ index, edges, selection, focusId, onSelectFile, onCe
         <Section title="Statements" count={edge.relationships.length}>
           {edge.relationships.map((r) => (
             <li key={r.id} className="rounded-sm border border-border bg-surface p-3">
-              <p className="text-sm">This relationship was detected at <Evidence rel={r} path={r.sourceId} /></p>
+              <p className="text-sm">This relationship was detected at <Evidence rel={r} path={r.sourceId} onOpen={open} /></p>
               <p className="mt-1 font-mono text-[12px] text-text-2">from &quot;{r.specifier}&quot;</p>
             </li>
           ))}
@@ -92,6 +102,24 @@ export function Inspector({ index, edges, selection, focusId, onSelectFile, onCe
         <button type="button" className={btn} aria-pressed={focused} onClick={() => onToggleFocus(file.id)}>
           <FontAwesomeIcon icon={faFilter} aria-hidden="true" /> {focused ? 'Show all files' : 'Show only neighbors'}
         </button>
+        {canPreview && (
+          <button type="button" className={btn} onClick={() => onPreview(file.id)}>
+            <FontAwesomeIcon icon={faCode} aria-hidden="true" /> View source
+          </button>
+        )}
+        {pathStart === null ? (
+          <button type="button" className={btn} onClick={() => onStartPath(file.id)}>
+            <FontAwesomeIcon icon={faRoute} aria-hidden="true" /> Start a path here
+          </button>
+        ) : pathStart === file.id ? (
+          <button type="button" className={btn} onClick={onClearPath}>
+            <FontAwesomeIcon icon={faRoute} aria-hidden="true" /> Cancel path start
+          </button>
+        ) : (
+          <button type="button" className={btn} onClick={() => onTracePath(file.id)}>
+            <FontAwesomeIcon icon={faRoute} aria-hidden="true" /> Trace path from {index.filesById.get(pathStart)?.baseName ?? pathStart} to here
+          </button>
+        )}
       </div>
 
       {file.diagnostics.length > 0 && (
@@ -118,7 +146,7 @@ export function Inspector({ index, edges, selection, focusId, onSelectFile, onCe
                 {RESOLUTION_LABEL[r.resolution]}{r.type === 'reexport' ? ', re-export' : ''}{r.typeOnly ? ', type-only' : ''}
               </span>
             </div>
-            <div className="mt-1"><Evidence rel={r} path={file.path} /></div>
+            <div className="mt-1"><Evidence rel={r} path={file.path} onOpen={open} /></div>
             {r.resolution === 'unresolved' && <p className="mt-1 text-[12px] text-warning">{r.note ?? 'No local dependency found for this import.'}</p>}
           </li>
         ))}
@@ -129,7 +157,7 @@ export function Inspector({ index, edges, selection, focusId, onSelectFile, onCe
           <li key={r.id} className="rounded-sm border border-border bg-surface p-3">
             <button type="button" className="break-all text-left font-mono text-[13px] text-accent underline underline-offset-4" onClick={() => onSelectFile(r.sourceId)}>{r.sourceId}</button>
             <div className="mt-1 flex items-center justify-between gap-2">
-              <Evidence rel={r} path={r.sourceId} />
+              <Evidence rel={r} path={r.sourceId} onOpen={open} />
               <span className="text-[11px] text-text-muted">{TYPE_LABEL[r.type]}{r.typeOnly ? ', type-only' : ''}</span>
             </div>
           </li>

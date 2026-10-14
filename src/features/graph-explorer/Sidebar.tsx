@@ -1,7 +1,8 @@
-import { useMemo, type Ref } from 'react'
+import { useMemo, type ReactNode, type Ref } from 'react'
 import { faMagnifyingGlass, faXmark } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { FileTree } from '../../components/file-tree/FileTree'
+import { FORCE_MAX_NODES, type LayoutKind } from '../../core/graph/layouts'
 import type { FileEntry, RelationshipType } from '../../core/types'
 
 interface Props {
@@ -19,6 +20,9 @@ interface Props {
   onClearFocus: () => void
   onSelectFile: (id: string) => void
   searchRef: Ref<HTMLInputElement>
+  layoutKind: LayoutKind
+  onLayoutKind: (k: LayoutKind) => void
+  insights: ReactNode
 }
 
 const TYPE_LABELS: { type: RelationshipType; label: string; hint: string }[] = [
@@ -26,7 +30,7 @@ const TYPE_LABELS: { type: RelationshipType; label: string; hint: string }[] = [
   { type: 'reexport', label: 'Re-exports', hint: 'dashed line' },
 ]
 
-export function Sidebar({ files, visibleIds, selectedId, query, onQuery, extensions, enabledExtensions, onToggleExtension, types, onToggleType, focusName, onClearFocus, onSelectFile, searchRef }: Props) {
+export function Sidebar({ files, visibleIds, selectedId, query, onQuery, extensions, enabledExtensions, onToggleExtension, types, onToggleType, focusName, onClearFocus, onSelectFile, searchRef, layoutKind, onLayoutKind, insights }: Props) {
   const visibleFiles = useMemo(() => files.filter((f) => visibleIds.has(f.id)), [files, visibleIds])
 
   return (
@@ -51,6 +55,23 @@ export function Sidebar({ files, visibleIds, selectedId, query, onQuery, extensi
             </button>
           )}
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="layout-kind" className="mb-1.5 block text-sm font-medium">Layout</label>
+        <select
+          id="layout-kind"
+          value={layoutKind}
+          onChange={(e) => onLayoutKind(e.target.value as LayoutKind)}
+          className="h-10 w-full rounded-sm border border-border-strong bg-bg px-2 text-sm text-text"
+        >
+          <option value="hierarchy">Layered: importers left of imports</option>
+          <option value="folders">Grouped by folder</option>
+          <option value="force" disabled={files.length > FORCE_MAX_NODES}>Force-directed</option>
+        </select>
+        {files.length > FORCE_MAX_NODES && (
+          <p className="mt-1 text-xs text-text-muted">Force-directed is limited to {FORCE_MAX_NODES.toLocaleString()} files because it is slow on larger graphs.</p>
+        )}
       </div>
 
       {focusName && (
@@ -81,6 +102,8 @@ export function Sidebar({ files, visibleIds, selectedId, query, onQuery, extensi
           </label>
         ))}
       </fieldset>
+
+      {insights}
 
       <section>
         <h2 className="mb-1.5 text-sm font-medium">Files ({visibleIds.size} of {files.length})</h2>
