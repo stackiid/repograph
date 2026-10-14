@@ -56,6 +56,7 @@ export function GraphCanvas({ nodes, edges, fitKey, onNodesChange, onEdgesChange
       minZoom={0.15}
       maxZoom={2}
       nodeDragThreshold={4}
+      onlyRenderVisibleElements
       nodesConnectable={false}
       deleteKeyCode={null}
       fitView

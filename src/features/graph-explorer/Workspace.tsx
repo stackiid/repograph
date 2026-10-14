@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MarkerType, ReactFlowProvider, useReactFlow, type Edge, type EdgeChange, type NodeChange } from '@xyflow/react'
-import { faArrowLeft, faFolderTree, faXmark, faCircleInfo } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faClipboardList, faFolderTree, faXmark, faCircleInfo } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { GraphCanvas } from '../../components/graph/GraphCanvas'
 import type { FileNodeType } from '../../components/graph/FileNode'
 import { GRAPH_COLORS } from '../../components/graph/graphTheme'
-import { DEMO_FILES, DEMO_PROJECT_NAME, DEMO_RELATIONSHIPS } from '../../core/graph/fixture'
+import { graphFiles, type ProjectData } from '../../core/analysis/project'
 import { layoutLayered, type Point } from '../../core/graph/layout'
 import { aggregateEdges, buildIndex, filterGraph, neighborIds } from '../../core/graph/model'
 import type { RelationshipType } from '../../core/types'
@@ -15,14 +15,20 @@ import { Sidebar } from './Sidebar'
 
 type Drawer = 'files' | 'inspector' | null
 
-function WorkspaceInner({ onExit }: { onExit: () => void }) {
+interface WorkspaceProps {
+  project: ProjectData
+  onExit: () => void
+  /** Opens the import report. Not offered for demo data. */
+  onShowReport?: () => void
+}
+
+function WorkspaceInner({ project, onExit, onShowReport }: WorkspaceProps) {
   const rf = useReactFlow()
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const searchRef = useRef<HTMLInputElement>(null)
 
-  // Demo data for now. Milestone 3 and 4 replace these with real analysis results.
-  const files = DEMO_FILES
-  const relationships = DEMO_RELATIONSHIPS
+  const relationships = project.relationships
+  const files = useMemo(() => graphFiles(project.files, relationships), [project.files, relationships])
   const index = useMemo(() => buildIndex(files, relationships), [files, relationships])
   const allEdges = useMemo(() => aggregateEdges(relationships), [relationships])
   const extensions = useMemo(() => [...new Set(files.map((f) => f.extension))].sort(), [files])
@@ -156,8 +162,13 @@ function WorkspaceInner({ onExit }: { onExit: () => void }) {
         <button type="button" onClick={onExit} className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-sm text-text-2 hover:text-text">
           <FontAwesomeIcon icon={faArrowLeft} aria-hidden="true" /> <span className="hidden sm:inline">Import another project</span><span className="sm:hidden">Back</span>
         </button>
-        <h1 className="truncate font-mono text-sm font-medium">{DEMO_PROJECT_NAME}</h1>
-        <span className="shrink-0 rounded-sm border border-warning px-2 py-0.5 text-xs text-warning">Demo data</span>
+        <h1 className="truncate font-mono text-sm font-medium">{project.name}</h1>
+        {project.demo && <span className="shrink-0 rounded-sm border border-warning px-2 py-0.5 text-xs text-warning">Demo data</span>}
+        {onShowReport && (
+          <button type="button" onClick={onShowReport} className="flex min-h-10 shrink-0 items-center gap-2 rounded-sm px-2 text-sm text-text-2 hover:text-text">
+            <FontAwesomeIcon icon={faClipboardList} aria-hidden="true" /> <span className="hidden sm:inline">Import report</span>
+          </button>
+        )}
         <div className="ml-auto flex gap-2 md:hidden">
           <button type="button" onClick={() => setDrawer('files')} className="flex min-h-10 items-center gap-2 rounded-sm border border-border-strong px-3 text-sm text-text-2">
             <FontAwesomeIcon icon={faFolderTree} aria-hidden="true" /> Files
@@ -229,17 +240,25 @@ function WorkspaceInner({ onExit }: { onExit: () => void }) {
         <span>Edges: <span className="font-mono text-text">{filtered.edges.length}</span> of {allEdges.length} shown</span>
         <span>Unresolved imports: <span className="font-mono text-text">{unresolved}</span></span>
         <span>Package imports: <span className="font-mono text-text">{external}</span></span>
-        <span className="text-warning">Demo data, not from your files</span>
+        {project.demo ? (
+          <span className="text-warning">Demo data, not from your files</span>
+        ) : (
+          <span className={project.analysis.filesFailed > 0 ? 'text-warning' : ''}>
+            {project.analysis.filesFailed > 0
+              ? `Analysis is partial: ${project.analysis.filesFailed} file${project.analysis.filesFailed === 1 ? '' : 's'} could not be parsed`
+              : `Parsed ${project.analysis.filesParsed.toLocaleString()} source files`}
+          </span>
+        )}
         <span className="ml-auto hidden text-text-muted lg:inline">/ search, F fit, Esc clear</span>
       </footer>
     </div>
   )
 }
 
-export function Workspace({ onExit }: { onExit: () => void }) {
+export function Workspace(props: WorkspaceProps) {
   return (
     <ReactFlowProvider>
-      <WorkspaceInner onExit={onExit} />
+      <WorkspaceInner {...props} />
     </ReactFlowProvider>
   )
 }

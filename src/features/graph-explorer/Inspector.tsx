@@ -94,6 +94,17 @@ export function Inspector({ index, edges, selection, focusId, onSelectFile, onCe
         </button>
       </div>
 
+      {file.diagnostics.length > 0 && (
+        <section className="mt-6" aria-label="Analysis notes">
+          <h3 className="mb-2 border-b border-border pb-1.5 text-sm font-medium">Analysis notes</h3>
+          <ul className="space-y-2">
+            {file.diagnostics.map((d, i) => (
+              <li key={i} className={`rounded-sm border bg-surface p-3 text-sm text-text-2 ${d.severity === 'error' ? 'border-error' : d.severity === 'warning' ? 'border-warning' : 'border-border'}`}>{d.message}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <Section title="Imports" count={outgoing.length}>
         {outgoing.map((r) => (
           <li key={r.id} className="rounded-sm border border-border bg-surface p-3">
@@ -104,11 +115,11 @@ export function Inspector({ index, edges, selection, focusId, onSelectFile, onCe
                 <span className="break-all font-mono text-[13px]">{r.specifier}</span>
               )}
               <span className="shrink-0 rounded-sm border border-border px-1.5 text-[11px] text-text-2">
-                {RESOLUTION_LABEL[r.resolution]}{r.type === 'reexport' ? ', re-export' : ''}
+                {RESOLUTION_LABEL[r.resolution]}{r.type === 'reexport' ? ', re-export' : ''}{r.typeOnly ? ', type-only' : ''}
               </span>
             </div>
             <div className="mt-1"><Evidence rel={r} path={file.path} /></div>
-            {r.resolution === 'unresolved' && <p className="mt-1 text-[12px] text-warning">No local dependency found for this import.</p>}
+            {r.resolution === 'unresolved' && <p className="mt-1 text-[12px] text-warning">{r.note ?? 'No local dependency found for this import.'}</p>}
           </li>
         ))}
       </Section>
@@ -119,7 +130,7 @@ export function Inspector({ index, edges, selection, focusId, onSelectFile, onCe
             <button type="button" className="break-all text-left font-mono text-[13px] text-accent underline underline-offset-4" onClick={() => onSelectFile(r.sourceId)}>{r.sourceId}</button>
             <div className="mt-1 flex items-center justify-between gap-2">
               <Evidence rel={r} path={r.sourceId} />
-              <span className="text-[11px] text-text-muted">{TYPE_LABEL[r.type]}</span>
+              <span className="text-[11px] text-text-muted">{TYPE_LABEL[r.type]}{r.typeOnly ? ', type-only' : ''}</span>
             </div>
           </li>
         ))}

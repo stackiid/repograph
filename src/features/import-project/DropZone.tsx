@@ -2,20 +2,20 @@ import { useId, useRef, useState, type DragEvent } from 'react'
 import { faCircleExclamation, faFileZipper } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { ArchiveError } from '../../core/archive/errors'
-import type { IngestResult } from '../../core/archive/ingest'
+import type { PipelineProgress, PipelineResult } from '../../core/analysis/pipeline'
 import { DEFAULT_LIMITS, formatBytes } from '../../core/archive/limits'
 import { checkArchive } from '../../core/archive/validateArchive'
-import { ingestInWorker } from './ingestClient'
+import { analyzeArchive } from './analysisClient'
 import { useEntrance } from './useEntrance'
 
 type State =
   | { kind: 'idle' }
-  | { kind: 'reading'; name: string }
+  | { kind: 'reading'; name: string; progress: PipelineProgress }
   | { kind: 'problem'; name: string; sizeBytes?: number; message: string }
 
 interface Props {
   ignorePatterns: string[]
-  onIngested: (name: string, result: IngestResult) => void
+  onIngested: (name: string, result: PipelineResult) => void
 }
 
 export function DropZone({ ignorePatterns, onIngested }: Props) {
@@ -39,9 +39,11 @@ export function DropZone({ ignorePatterns, onIngested }: Props) {
     abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
-    setState({ kind: 'reading', name: file.name })
+    setState({ kind: 'reading', name: file.name, progress: { stage: 'reading' } })
     try {
-      const result = await ingestInWorker(file, { limits: DEFAULT_LIMITS, ignorePatterns }, controller.signal)
+      const result = await analyzeArchive(file, { limits: DEFAULT_LIMITS, ignorePatterns }, controller.signal, (progress) =>
+        setState((cur) => (cur.kind === 'reading' ? { ...cur, progress } : cur)),
+      )
       setState({ kind: 'idle' })
       onIngested(file.name.replace(/\.zip$/i, ''), result)
     } catch (err) {
@@ -88,13 +90,22 @@ export function DropZone({ ignorePatterns, onIngested }: Props) {
 
       <div role="status" aria-live="polite" className="mt-4">
         {state.kind === 'reading' && (
-          <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-surface p-4 text-sm">
-            <p className="text-text-2">
-              Reading <span className="font-mono text-text">{state.name}</span> and applying exclusions. This runs in your browser.
-            </p>
-            <button type="button" onClick={cancel} className="shrink-0 rounded-sm border border-border-strong px-3 py-1.5 text-text-2 transition-colors hover:border-accent hover:text-text">
-              Cancel
-            </button>
+          <div className="rounded-md border border-border bg-surface p-4 text-sm">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-text-2">
+                <span className="font-mono text-text">{state.name}</span>:{' '}
+                {state.progress.stage === 'reading' && 'reading archive and applying exclusions'}
+                {state.progress.stage === 'parsing' && `parsing source files, ${state.progress.done.toLocaleString()} of ${state.progress.total.toLocaleString()}`}
+                {state.progress.stage === 'resolving' && 'resolving imports'}
+              </p>
+              <button type="button" onClick={cancel} className="shrink-0 rounded-sm border border-border-strong px-3 py-1.5 text-text-2 transition-colors hover:border-accent hover:text-text">
+                Cancel
+              </button>
+            </div>
+            {state.progress.stage === 'parsing' && (
+              <progress className="mt-3 h-1.5 w-full accent-[#35c6b0]" value={state.progress.done} max={state.progress.total} aria-label="Parsing progress" />
+            )}
+            <p className="mt-2 text-xs text-text-muted">Everything runs in your browser. Nothing is uploaded.</p>
           </div>
         )}
         {state.kind === 'problem' && (

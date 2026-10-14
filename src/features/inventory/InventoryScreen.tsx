@@ -1,26 +1,32 @@
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import { faArrowLeft, faDiagramProject } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { FileTree } from '../../components/file-tree/FileTree'
-import type { IngestResult } from '../../core/archive/ingest'
+import { graphFiles, type ProjectData } from '../../core/analysis/project'
 
 const MAX_DIAGNOSTICS_SHOWN = 50
 const SEVERITY_LABEL = { info: 'Note', warning: 'Warning', error: 'Error' } as const
+const SEVERITY_ORDER = { error: 0, warning: 1, info: 2 } as const
 
-function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
+function Stat({ label, value, hint, tone }: { label: string; value: number; hint?: string; tone?: 'warning' }) {
   return (
     <div className="bg-bg px-4 py-4">
-      <dd className="font-mono text-2xl">{value.toLocaleString()}</dd>
+      <dd className={`font-mono text-2xl ${tone === 'warning' && value > 0 ? 'text-warning' : ''}`}>{value.toLocaleString()}</dd>
       <dt className="mt-1 text-sm text-text-2">{label}</dt>
       {hint && <p className="mt-0.5 text-xs text-text-muted">{hint}</p>}
     </div>
   )
 }
 
-export function InventoryScreen({ name, result, onExit }: { name: string; result: IngestResult; onExit: () => void }) {
-  const { stats, diagnostics, files, rootPrefix } = result
+interface Props { project: ProjectData; onExit: () => void; onOpenGraph: () => void }
+
+export function InventoryScreen({ project, onExit, onOpenGraph }: Props) {
+  const { ingest, analysis, files, diagnostics, rootPrefix } = project
+  const stats = ingest!
   const rules = Object.entries(stats.ignoredBy).sort((a, b) => b[1] - a[1])
-  const shown = diagnostics.slice(0, MAX_DIAGNOSTICS_SHOWN)
+  const sorted = [...diagnostics].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
+  const shown = sorted.slice(0, MAX_DIAGNOSTICS_SHOWN)
   const skipped = stats.unsafe + stats.oversized + stats.binary
+  const graphable = graphFiles(files, project.relationships).length > 0
 
   return (
     <div className="mx-auto min-h-dvh max-w-6xl px-5 pb-16 sm:px-8">
@@ -30,15 +36,29 @@ export function InventoryScreen({ name, result, onExit }: { name: string; result
         </button>
       </header>
 
-      <h1 className="font-mono text-2xl font-medium">{name}</h1>
-      <p className="mt-2 max-w-[62ch] text-text-2">
-        The archive was read in this browser and nothing was uploaded. Dependency analysis is not built yet, so no relationships have been detected and no graph is shown.
-      </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="font-mono text-2xl font-medium">{project.name}</h1>
+          <p className="mt-2 max-w-[62ch] text-text-2">
+            Read and analyzed in this browser. Nothing was uploaded. Only static import and export-from statements are detected, so counts below do not include require() or dynamic import().
+          </p>
+        </div>
+        {graphable ? (
+          <button type="button" onClick={onOpenGraph} className="flex min-h-11 items-center gap-2 rounded-sm bg-accent px-5 text-sm font-semibold text-bg transition-opacity hover:opacity-90">
+            <FontAwesomeIcon icon={faDiagramProject} aria-hidden="true" /> Explore the graph
+          </button>
+        ) : (
+          <p className="rounded-sm border border-warning px-3 py-2 text-sm text-warning">No JavaScript or TypeScript source files were found, so there is no graph to show.</p>
+        )}
+      </div>
 
-      <dl className="mt-8 grid gap-px border-y border-border bg-border sm:grid-cols-2 lg:grid-cols-5" aria-label="Archive summary">
+      <dl className="mt-8 grid gap-px border-y border-border bg-border sm:grid-cols-2 lg:grid-cols-4" aria-label="Analysis summary">
         <Stat label="Files listed" value={files.length} hint={`of ${stats.entries.toLocaleString()} in the archive`} />
-        <Stat label="Source files read" value={stats.readable} hint="Ready for analysis" />
-        <Stat label="Other files" value={stats.unsupported} hint="Listed, not analyzed" />
+        <Stat label="Source files parsed" value={analysis.filesParsed} hint={`of ${stats.readable.toLocaleString()} readable`} />
+        <Stat label="Import statements" value={analysis.statements} hint={`${analysis.resolved.toLocaleString()} resolve to files`} />
+        <Stat label="Package imports" value={analysis.external} hint="Not drawn as file edges" />
+        <Stat label="Unresolved imports" value={analysis.unresolved} hint="Reported, never drawn" tone="warning" />
+        <Stat label="Parse failures" value={analysis.filesFailed} hint="Imports in these files are missing" tone="warning" />
         <Stat label="Excluded by rules" value={stats.ignored} />
         <Stat label="Skipped" value={skipped} hint="Unsafe, too large, or binary" />
       </dl>
@@ -50,7 +70,7 @@ export function InventoryScreen({ name, result, onExit }: { name: string; result
           <div className="mt-3 max-h-[60vh] overflow-y-auto rounded-md border border-border bg-surface p-2">
             <FileTree label="Project files" files={files} />
           </div>
-          <p className="mt-2 text-xs text-text-muted">Dimmed files are listed but will not be analyzed.</p>
+          <p className="mt-2 text-xs text-text-muted">Dimmed files are listed but not analyzed.</p>
         </section>
 
         <div className="space-y-10">
@@ -73,7 +93,7 @@ export function InventoryScreen({ name, result, onExit }: { name: string; result
           <section aria-labelledby="diag-h">
             <h2 id="diag-h" className="text-base font-semibold">Diagnostics ({diagnostics.length})</h2>
             {diagnostics.length === 0 ? (
-              <p className="mt-2 text-sm text-text-2">No problems found while reading the archive.</p>
+              <p className="mt-2 text-sm text-text-2">No problems found.</p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {shown.map((d, i) => (
@@ -87,7 +107,7 @@ export function InventoryScreen({ name, result, onExit }: { name: string; result
                 ))}
               </ul>
             )}
-            {diagnostics.length > shown.length && <p className="mt-2 text-sm text-text-muted">And {(diagnostics.length - shown.length).toLocaleString()} more not shown.</p>}
+            {sorted.length > shown.length && <p className="mt-2 text-sm text-text-muted">And {(sorted.length - shown.length).toLocaleString()} more not shown.</p>}
           </section>
         </div>
       </div>

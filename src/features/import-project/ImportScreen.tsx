@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DEFAULT_IGNORE_PATTERNS, parsePatterns } from '../../core/archive/ignore'
-import type { IngestResult } from '../../core/archive/ingest'
+import type { PipelineResult } from '../../core/analysis/pipeline'
 import { DropZone } from './DropZone'
 
 const FACTS = [
@@ -12,18 +12,18 @@ const FACTS = [
   {
     id: 'limits',
     title: 'What it will and will not detect',
-    body: 'Planned coverage is static import and export statements in JavaScript, JSX, TypeScript, and TSX files. Dynamic imports, runtime behavior, and other languages are not covered. Relationships that cannot be resolved are reported, not drawn.',
+    body: 'Detected: static import and export-from statements in JavaScript, JSX, TypeScript, and TSX files, with the source line. Not detected: require(), dynamic import(), path aliases, runtime behavior, and other languages. Relationships that cannot be resolved are reported, never drawn.',
   },
   {
     id: 'sources',
     title: 'ZIP first, GitHub URLs later',
-    body: 'A browser cannot clone a Git repository, and private repositories are out of reach without a server. ZIP upload is the dependable path. Public GitHub archive import will follow and will fall back to ZIP when blocked.',
+    body: 'A browser cannot clone a Git repository, and private repositories are out of reach without a server. ZIP upload is the dependable path. Public GitHub archive import is planned and will fall back to ZIP when blocked.',
   },
 ]
 
 interface Props {
   onLoadDemo: () => void
-  onIngested: (name: string, result: IngestResult) => void
+  onIngested: (name: string, result: PipelineResult) => void
 }
 
 const DEFAULT_TEXT = DEFAULT_IGNORE_PATTERNS.join('\n')
@@ -88,7 +88,7 @@ export function ImportScreen({ onLoadDemo, onIngested }: Props) {
         ))}
       </section>
       <footer className="py-8 text-sm text-text-muted">
-        Version 0.0.1. The workspace runs on demo data until archive reading and analysis ship.
+        Version 0.0.1. The sample project uses demo data. Imported projects use your own files.
       </footer>
     </div>
   )

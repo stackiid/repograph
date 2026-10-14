@@ -46,4 +46,8 @@ export interface Relationship {
   /** The original import specifier, kept as evidence. */
   specifier: string
   resolution: ResolutionStatus
+  /** True for `import type` and `export type` statements. */
+  typeOnly?: boolean
+  /** Why a relationship is unresolved, shown as evidence. */
+  note?: string
 }

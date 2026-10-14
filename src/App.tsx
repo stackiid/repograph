@@ -2,7 +2,7 @@ import { faArrowUpRightFromSquare, faProjectDiagram } from '@fortawesome/free-so
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { PROJECT } from './config/project'
 import { lazy, Suspense, useState } from 'react'
-import type { IngestResult } from './core/archive/ingest'
+import { demoProject, projectFromPipeline, type ProjectData } from './core/analysis/project'
 import { InventoryScreen } from './features/inventory/InventoryScreen'
 import { ImportScreen } from './features/import-project/ImportScreen'
 
@@ -10,15 +10,16 @@ import { ImportScreen } from './features/import-project/ImportScreen'
 const Workspace = lazy(() => import('./features/graph-explorer/Workspace').then((m) => ({ default: m.Workspace })))
 
 export function App() {
-  const [view, setView] = useState<'import' | 'workspace' | 'inventory'>('import')
-  const [project, setProject] = useState<{ name: string; result: IngestResult } | null>(null)
-  if (view === 'inventory' && project) {
-    return <InventoryScreen name={project.name} result={project.result} onExit={() => { setProject(null); setView('import') }} />
+  const [view, setView] = useState<'import' | 'report' | 'workspace'>('import')
+  const [project, setProject] = useState<ProjectData | null>(null)
+  const exit = () => { setProject(null); setView('import') }
+  if (view === 'report' && project) {
+    return <InventoryScreen project={project} onExit={exit} onOpenGraph={() => setView('workspace')} />
   }
   if (view === 'workspace') {
     return (
       <Suspense fallback={<p role="status" className="grid h-dvh place-items-center bg-bg text-sm text-text-2">Loading workspace</p>}>
-        <Workspace onExit={() => setView('import')} />
+        <Workspace project={project ?? demoProject()} onExit={exit} onShowReport={project && !project.demo ? () => setView('report') : undefined} />
       </Suspense>
     )
   }
@@ -45,8 +46,8 @@ export function App() {
       </header>
       <main id="main">
         <ImportScreen
-          onLoadDemo={() => setView('workspace')}
-          onIngested={(name, result) => { setProject({ name, result }); setView('inventory') }}
+          onLoadDemo={() => { setProject(demoProject()); setView('workspace') }}
+          onIngested={(name, result) => { setProject(projectFromPipeline(name, result)); setView('report') }}
         />
       </main>
     </div>
