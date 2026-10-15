@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { DEFAULT_IGNORE_PATTERNS, parsePatterns } from '../../core/archive/ignore'
 import type { PipelineResult } from '../../core/analysis/pipeline'
 import type { ProjectData } from '../../core/analysis/project'
+import { GitHubImport } from '../github/GitHubImport'
 import { OpenGraphFile } from '../persistence/OpenGraphFile'
 import { SavedProjects } from '../persistence/SavedProjects'
 import { DropZone } from './DropZone'
@@ -19,8 +20,8 @@ const FACTS = [
   },
   {
     id: 'sources',
-    title: 'ZIP first, GitHub URLs later',
-    body: 'A browser cannot clone a Git repository, and private repositories are out of reach without a server. ZIP upload is the dependable path. Public GitHub archive import is planned and will fall back to ZIP when blocked.',
+    title: 'ZIP first, GitHub through ZIP',
+    body: 'A browser cannot clone a Git repository, GitHub does not let web pages download its archives, and private repositories are out of reach without a server. ZIP upload is the dependable path. For a public repository, paste its URL to get the official ZIP link.',
   },
 ]
 
@@ -70,6 +71,7 @@ export function ImportScreen({ onLoadDemo, onIngested, onOpenProject }: Props) {
               </button>
             </div>
           </details>
+          <GitHubImport />
           <div className="mt-6 border-t border-border pt-5">
             <button
               type="button"
