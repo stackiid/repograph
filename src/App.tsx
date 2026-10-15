@@ -19,7 +19,7 @@ export function App() {
   if (view === 'workspace') {
     return (
       <Suspense fallback={<p role="status" className="grid h-dvh place-items-center bg-bg text-sm text-text-2">Loading workspace</p>}>
-        <Workspace project={project ?? demoProject()} onExit={exit} onShowReport={project && !project.demo ? () => setView('report') : undefined} />
+        <Workspace project={project ?? demoProject()} onExit={exit} onShowReport={project && !project.demo ? () => setView('report') : undefined} onProjectSaved={(id) => setProject((p) => (p ? { ...p, savedId: id } : p))} />
       </Suspense>
     )
   }
@@ -48,6 +48,7 @@ export function App() {
         <ImportScreen
           onLoadDemo={() => { setProject(demoProject()); setView('workspace') }}
           onIngested={(name, result) => { setProject(projectFromPipeline(name, result)); setView('report') }}
+          onOpenProject={(p) => { setProject(p); setView('workspace') }}
         />
       </main>
     </div>

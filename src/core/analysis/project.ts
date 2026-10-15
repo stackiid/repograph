@@ -16,8 +16,10 @@ export interface ProjectData {
   /** Null for demo data, which was never read from an archive. */
   ingest: IngestStats | null
   analysis: AnalysisStats
-  /** Source text by file id. Held in memory only. */
+  /** Source text by file id. Held in memory unless the user explicitly saves it. */
   sources: ReadonlyMap<string, string> | null
+  /** Set once the project exists in local browser storage. */
+  savedId?: string
 }
 
 export function projectFromPipeline(name: string, r: PipelineResult): ProjectData {

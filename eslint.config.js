@@ -11,5 +11,9 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
     plugins: { 'react-hooks': reactHooks },
     rules: { ...reactHooks.configs.recommended.rules },
+  },  {
+    // Tests deliberately build malformed JSON documents, so loose typing is intended there.
+    files: ['**/*.test.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
   },
 )

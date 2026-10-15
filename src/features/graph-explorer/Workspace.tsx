@@ -14,6 +14,7 @@ import { aggregateEdges, buildIndex, filterGraph, runtimeEdges } from '../../cor
 import type { RelationshipType } from '../../core/types'
 import { prefersReducedMotion, useMediaQuery } from '../../hooks/useMediaQuery'
 import { useLayout } from '../../hooks/useLayout'
+import { ProjectActions } from '../persistence/ProjectActions'
 import { InsightsPanel } from './InsightsPanel'
 import { Inspector, type Selection } from './Inspector'
 import { Sidebar } from './Sidebar'
@@ -27,9 +28,11 @@ interface WorkspaceProps {
   onExit: () => void
   /** Opens the import report. Not offered for demo data. */
   onShowReport?: () => void
+  /** Called after the user saves the project to local browser storage. */
+  onProjectSaved?: (id: string) => void
 }
 
-function WorkspaceInner({ project, onExit, onShowReport }: WorkspaceProps) {
+function WorkspaceInner({ project, onExit, onShowReport, onProjectSaved }: WorkspaceProps) {
   const rf = useReactFlow()
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const searchRef = useRef<HTMLInputElement>(null)
@@ -281,6 +284,7 @@ function WorkspaceInner({ project, onExit, onShowReport }: WorkspaceProps) {
             <FontAwesomeIcon icon={faClipboardList} aria-hidden="true" /> <span className="hidden sm:inline">Import report</span>
           </button>
         )}
+        {!project.demo && <ProjectActions project={project} onSaved={(id) => onProjectSaved?.(id)} />}
         <div className="ml-auto flex gap-2 md:hidden">
           <button type="button" onClick={() => setDrawer('files')} className="flex min-h-10 items-center gap-2 rounded-sm border border-border-strong px-3 text-sm text-text-2">
             <FontAwesomeIcon icon={faFolderTree} aria-hidden="true" /> Files

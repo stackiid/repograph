@@ -1,13 +1,16 @@
 import { useMemo, useState } from 'react'
 import { DEFAULT_IGNORE_PATTERNS, parsePatterns } from '../../core/archive/ignore'
 import type { PipelineResult } from '../../core/analysis/pipeline'
+import type { ProjectData } from '../../core/analysis/project'
+import { OpenGraphFile } from '../persistence/OpenGraphFile'
+import { SavedProjects } from '../persistence/SavedProjects'
 import { DropZone } from './DropZone'
 
 const FACTS = [
   {
     id: 'local',
     title: 'Your files stay in this browser',
-    body: 'RepoGraph has no server. Archives are read, parsed, and graphed on your machine. Source code is treated as text and is never executed or uploaded.',
+    body: 'RepoGraph has no server. Archives are read, parsed, and graphed on your machine. Source code is treated as text and is never executed or uploaded. Nothing is stored unless you choose Save locally, and you can delete it at any time.',
   },
   {
     id: 'limits',
@@ -24,11 +27,12 @@ const FACTS = [
 interface Props {
   onLoadDemo: () => void
   onIngested: (name: string, result: PipelineResult) => void
+  onOpenProject: (project: ProjectData) => void
 }
 
 const DEFAULT_TEXT = DEFAULT_IGNORE_PATTERNS.join('\n')
 
-export function ImportScreen({ onLoadDemo, onIngested }: Props) {
+export function ImportScreen({ onLoadDemo, onIngested, onOpenProject }: Props) {
   const [exclusionText, setExclusionText] = useState(DEFAULT_TEXT)
   const ignorePatterns = useMemo(() => parsePatterns(exclusionText), [exclusionText])
   return (
@@ -76,6 +80,8 @@ export function ImportScreen({ onLoadDemo, onIngested }: Props) {
             </button>
             <p className="mt-2 text-sm text-text-muted">Opens the workspace with labeled demo data. No files are read.</p>
           </div>
+          <SavedProjects onOpen={onOpenProject} />
+          <OpenGraphFile onOpen={onOpenProject} />
         </div>
       </section>
 
