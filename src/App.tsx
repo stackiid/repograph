@@ -1,7 +1,7 @@
 import { faArrowUpRightFromSquare, faProjectDiagram } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { PROJECT } from './config/project'
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { demoProject, projectFromPipeline, type ProjectData } from './core/analysis/project'
 import { InventoryScreen } from './features/inventory/InventoryScreen'
 import { ImportScreen } from './features/import-project/ImportScreen'
@@ -10,9 +10,17 @@ import { ImportScreen } from './features/import-project/ImportScreen'
 const Workspace = lazy(() => import('./features/graph-explorer/Workspace').then((m) => ({ default: m.Workspace })))
 
 export function App() {
-  const [view, setView] = useState<'import' | 'report' | 'workspace'>('import')
+  const [view, setViewState] = useState<'import' | 'report' | 'workspace'>('import')
   const [project, setProject] = useState<ProjectData | null>(null)
+  // Focus is only moved after the user has navigated, never on the first page load.
+  const [navigated, setNavigated] = useState(false)
+  const setView = (v: 'import' | 'report' | 'workspace') => { setNavigated(true); setViewState(v) }
   const exit = () => { setProject(null); setView('import') }
+
+  useEffect(() => {
+    document.title = view === 'import' || !project ? 'RepoGraph' : `${project.name}, ${view === 'report' ? 'import report' : 'graph'} - RepoGraph`
+  }, [view, project])
+
   if (view === 'report' && project) {
     return <InventoryScreen project={project} onExit={exit} onOpenGraph={() => setView('workspace')} />
   }
@@ -46,6 +54,7 @@ export function App() {
       </header>
       <main id="main">
         <ImportScreen
+          focusHeading={navigated}
           onLoadDemo={() => { setProject(demoProject()); setView('workspace') }}
           onIngested={(name, result) => { setProject(projectFromPipeline(name, result)); setView('report') }}
           onOpenProject={(p) => { setProject(p); setView('workspace') }}

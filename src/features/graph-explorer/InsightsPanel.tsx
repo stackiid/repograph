@@ -49,7 +49,7 @@ export function InsightsPanel({ cycles, activeCycle, onSelectCycle, isolated, un
       <Block title="Files with unresolved imports" count={unresolved.length}>
         <ul>
           {unresolved.slice(0, MAX_LISTED).map((u) => (
-            <li key={u.id}><button type="button" className={row} onClick={() => onSelectFile(u.id)}><span className="truncate">{u.name}</span><span className="shrink-0 text-warning">{u.count}</span></button></li>
+            <li key={u.id}><button type="button" className={row} onClick={() => onSelectFile(u.id)}><span className="truncate">{u.name}</span><span className="shrink-0 text-warning"><span className="sr-only">, unresolved imports: </span>{u.count}</span></button></li>
           ))}
         </ul>
         {unresolved.length > MAX_LISTED && <p className="px-1 pt-1 text-xs text-text-muted">And {unresolved.length - MAX_LISTED} more not listed.</p>}

@@ -13,6 +13,7 @@ import type { Point } from '../../core/graph/layout'
 import { aggregateEdges, buildIndex, filterGraph, runtimeEdges } from '../../core/graph/model'
 import type { RelationshipType } from '../../core/types'
 import { prefersReducedMotion, useMediaQuery } from '../../hooks/useMediaQuery'
+import { useFocusOnMount } from '../../hooks/useFocusOnMount'
 import { useLayout } from '../../hooks/useLayout'
 import { ProjectActions } from '../persistence/ProjectActions'
 import { InsightsPanel } from './InsightsPanel'
@@ -36,6 +37,7 @@ function WorkspaceInner({ project, onExit, onShowReport, onProjectSaved }: Works
   const rf = useReactFlow()
   const isDesktop = useMediaQuery('(min-width: 768px)')
   const searchRef = useRef<HTMLInputElement>(null)
+  const headingRef = useFocusOnMount<HTMLHeadingElement>()
   const fit = useCallback(() => void rf.fitView({ padding: 0.15, duration: prefersReducedMotion() ? 0 : 200 }), [rf])
 
   // ---- Project-wide derived data. Computed once per project, never per selection.
@@ -277,7 +279,7 @@ function WorkspaceInner({ project, onExit, onShowReport, onProjectSaved }: Works
         <button type="button" onClick={onExit} className="flex min-h-10 items-center gap-2 rounded-sm px-2 text-sm text-text-2 hover:text-text">
           <FontAwesomeIcon icon={faArrowLeft} aria-hidden="true" /> <span className="hidden sm:inline">Import another project</span><span className="sm:hidden">Back</span>
         </button>
-        <h1 className="truncate font-mono text-sm font-medium">{project.name}</h1>
+        <h1 ref={headingRef} tabIndex={-1} className="truncate font-mono text-sm font-medium focus:outline-none">{project.name}</h1>
         {project.demo && <span className="shrink-0 rounded-sm border border-warning px-2 py-0.5 text-xs text-warning">Demo data</span>}
         {onShowReport && (
           <button type="button" onClick={onShowReport} className="flex min-h-10 shrink-0 items-center gap-2 rounded-sm px-2 text-sm text-text-2 hover:text-text">

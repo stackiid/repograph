@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { faFileExport, faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import type { ProjectData } from '../../core/analysis/project'
@@ -19,11 +19,17 @@ const btn = 'flex min-h-10 shrink-0 items-center gap-2 rounded-sm px-2 text-sm t
 export function ProjectActions({ project, onSaved }: Props) {
   const panelId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [includeSource, setIncludeSource] = useState(false)
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const canSaveSource = project.sources !== null && project.sources.size > 0
   const supported = isStorageSupported()
+
+  // Move focus into the panel when it opens, so keyboard and screen reader users land inside it.
+  useEffect(() => {
+    if (open) panelRef.current?.focus()
+  }, [open])
 
   function exportJson() {
     downloadText(exportFileName(project.name), JSON.stringify(toExport(project)))
@@ -46,7 +52,10 @@ export function ProjectActions({ project, onSaved }: Props) {
   }
 
   return (
-    <div className="relative flex items-center">
+    <div
+      className="relative flex items-center"
+      onKeyDown={(e) => { if (open && e.key === 'Escape') { e.stopPropagation(); close() } }}
+    >
       <button type="button" className={btn} onClick={exportJson} aria-label="Export graph as JSON" title="Export graph as JSON">
         <FontAwesomeIcon icon={faFileExport} aria-hidden="true" /> <span className="hidden lg:inline">Export JSON</span>
       </button>
@@ -61,9 +70,8 @@ export function ProjectActions({ project, onSaved }: Props) {
 
       {open && (
         <div
-          id={panelId} role="group" aria-label="Save to this browser"
-          onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); close() } }}
-          className="fixed left-3 right-3 top-14 z-50 rounded-md border border-border-strong bg-surface p-4 text-sm shadow-lg sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-[360px]"
+          id={panelId} ref={panelRef} tabIndex={-1} role="group" aria-label="Save to this browser"
+          className="focus:outline-none fixed left-3 right-3 top-14 z-50 rounded-md border border-border-strong bg-surface p-4 text-sm shadow-lg sm:absolute sm:left-0 sm:right-auto sm:top-full sm:mt-2 sm:w-[360px]"
         >
           <h2 className="font-semibold">Save to this browser</h2>
           {!supported ? (

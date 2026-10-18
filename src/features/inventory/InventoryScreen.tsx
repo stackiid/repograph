@@ -2,17 +2,21 @@ import { faArrowLeft, faDiagramProject } from '@fortawesome/free-solid-svg-icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { FileTree } from '../../components/file-tree/FileTree'
 import { graphFiles, type ProjectData } from '../../core/analysis/project'
+import { useFocusOnMount } from '../../hooks/useFocusOnMount'
 
 const MAX_DIAGNOSTICS_SHOWN = 50
 const SEVERITY_LABEL = { info: 'Note', warning: 'Warning', error: 'Error' } as const
 const SEVERITY_ORDER = { error: 0, warning: 1, info: 2 } as const
 
 function Stat({ label, value, hint, tone }: { label: string; value: number; hint?: string; tone?: 'warning' }) {
+  // DOM order is label then value, as a description list requires. flex-col-reverse shows the value above the label.
   return (
-    <div className="bg-bg px-4 py-4">
+    <div className="flex flex-col-reverse justify-end bg-bg px-4 py-4">
+      <dt className="mt-1 text-sm text-text-2">
+        {label}
+        {hint && <span className="mt-0.5 block text-xs text-text-muted">{hint}</span>}
+      </dt>
       <dd className={`font-mono text-2xl ${tone === 'warning' && value > 0 ? 'text-warning' : ''}`}>{value.toLocaleString()}</dd>
-      <dt className="mt-1 text-sm text-text-2">{label}</dt>
-      {hint && <p className="mt-0.5 text-xs text-text-muted">{hint}</p>}
     </div>
   )
 }
@@ -20,6 +24,7 @@ function Stat({ label, value, hint, tone }: { label: string; value: number; hint
 interface Props { project: ProjectData; onExit: () => void; onOpenGraph: () => void }
 
 export function InventoryScreen({ project, onExit, onOpenGraph }: Props) {
+  const headingRef = useFocusOnMount<HTMLHeadingElement>()
   const { ingest, analysis, files, diagnostics, rootPrefix } = project
   const stats = ingest!
   const rules = Object.entries(stats.ignoredBy).sort((a, b) => b[1] - a[1])
@@ -36,9 +41,10 @@ export function InventoryScreen({ project, onExit, onOpenGraph }: Props) {
         </button>
       </header>
 
+      <main>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-mono text-2xl font-medium">{project.name}</h1>
+          <h1 ref={headingRef} tabIndex={-1} className="font-mono text-2xl font-medium focus:outline-none">{project.name}</h1>
           <p className="mt-2 max-w-[62ch] text-text-2">
             Read and analyzed in this browser. Nothing was uploaded. Only static import and export-from statements are detected, so counts below do not include require() or dynamic import().
           </p>
@@ -111,6 +117,7 @@ export function InventoryScreen({ project, onExit, onOpenGraph }: Props) {
           </section>
         </div>
       </div>
+      </main>
     </div>
   )
 }

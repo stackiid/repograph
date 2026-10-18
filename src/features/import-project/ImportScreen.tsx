@@ -5,6 +5,7 @@ import type { ProjectData } from '../../core/analysis/project'
 import { GitHubImport } from '../github/GitHubImport'
 import { OpenGraphFile } from '../persistence/OpenGraphFile'
 import { SavedProjects } from '../persistence/SavedProjects'
+import { useFocusOnMount } from '../../hooks/useFocusOnMount'
 import { DropZone } from './DropZone'
 
 const FACTS = [
@@ -29,18 +30,21 @@ interface Props {
   onLoadDemo: () => void
   onIngested: (name: string, result: PipelineResult) => void
   onOpenProject: (project: ProjectData) => void
+  /** True when the user arrived here from another screen, so the heading should take focus. */
+  focusHeading?: boolean
 }
 
 const DEFAULT_TEXT = DEFAULT_IGNORE_PATTERNS.join('\n')
 
-export function ImportScreen({ onLoadDemo, onIngested, onOpenProject }: Props) {
+export function ImportScreen({ onLoadDemo, onIngested, onOpenProject, focusHeading = false }: Props) {
+  const headingRef = useFocusOnMount<HTMLHeadingElement>(focusHeading)
   const [exclusionText, setExclusionText] = useState(DEFAULT_TEXT)
   const ignorePatterns = useMemo(() => parsePatterns(exclusionText), [exclusionText])
   return (
     <div className="mx-auto max-w-6xl px-5 sm:px-8">
       <section className="grid gap-12 py-14 md:grid-cols-[1.05fr_1fr] md:items-start md:py-24">
         <div>
-          <h1 className="max-w-[14ch] text-5xl font-bold leading-[1.02] tracking-tight sm:text-6xl">
+          <h1 ref={headingRef} tabIndex={-1} className="max-w-[14ch] focus:outline-none text-5xl font-bold leading-[1.02] tracking-tight sm:text-6xl">
             Map your codebase.
           </h1>
           <p className="mt-6 max-w-[46ch] text-lg text-text-2">

@@ -23,7 +23,7 @@ function pkg(source: string, line: number, specifier: string): Relationship {
   return { id: `${source}:${line}:${specifier}`, sourceId: source, type: 'import', line, specifier, resolution: 'external' }
 }
 function missing(source: string, line: number, specifier: string): Relationship {
-  return { id: `${source}:${line}:${specifier}`, sourceId: source, type: 'import', line, specifier, resolution: 'unresolved' }
+  return { id: `${source}:${line}:${specifier}`, sourceId: source, type: 'import', line, specifier, resolution: 'unresolved', note: 'This looks like a path alias. Alias configuration is not read yet.' }
 }
 
 export const DEMO_FILES: FileEntry[] = [
