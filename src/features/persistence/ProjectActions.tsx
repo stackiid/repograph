@@ -1,10 +1,10 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { faFileExport, faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import type { ProjectData } from '../../core/analysis/project'
-import { exportFileName, toExport } from '../../core/persistence/serialize'
+import type { ExportGraphInput } from '../../core/export/scene'
 import { describeStorageError, isStorageSupported } from '../../core/persistence/store'
-import { downloadText } from './download'
+import { ExportMenu } from '../export/ExportMenu'
 import { projectStore } from './projectStore'
 
 type Status = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved'; withSource: boolean } | { kind: 'error'; message: string }
@@ -12,11 +12,13 @@ type Status = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved'; withSourc
 interface Props {
   project: ProjectData
   onSaved: (id: string) => void
+  /** The graph as currently shown, for image export. Null while the layout is still being arranged. */
+  getGraph: () => ExportGraphInput | null
 }
 
 const btn = 'flex min-h-10 shrink-0 items-center gap-2 rounded-sm px-2 text-sm text-text-2 transition-colors hover:text-text'
 
-export function ProjectActions({ project, onSaved }: Props) {
+export function ProjectActions({ project, onSaved, getGraph }: Props) {
   const panelId = useId()
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -30,10 +32,6 @@ export function ProjectActions({ project, onSaved }: Props) {
   useEffect(() => {
     if (open) panelRef.current?.focus()
   }, [open])
-
-  function exportJson() {
-    downloadText(exportFileName(project.name), JSON.stringify(toExport(project)))
-  }
 
   async function save() {
     setStatus({ kind: 'saving' })
@@ -56,9 +54,7 @@ export function ProjectActions({ project, onSaved }: Props) {
       className="relative flex items-center"
       onKeyDown={(e) => { if (open && e.key === 'Escape') { e.stopPropagation(); close() } }}
     >
-      <button type="button" className={btn} onClick={exportJson} aria-label="Export graph as JSON" title="Export graph as JSON">
-        <FontAwesomeIcon icon={faFileExport} aria-hidden="true" /> <span className="hidden lg:inline">Export JSON</span>
-      </button>
+      <ExportMenu project={project} getGraph={getGraph} />
       <button
         ref={triggerRef} type="button" className={btn}
         aria-expanded={open} aria-controls={panelId}

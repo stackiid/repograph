@@ -2,7 +2,7 @@ import { faArrowUpRightFromSquare, faProjectDiagram } from '@fortawesome/free-so
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { PROJECT } from './config/project'
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { demoProject, projectFromPipeline, type ProjectData } from './core/analysis/project'
+import { projectFromPipeline, type ProjectData } from './core/analysis/project'
 import { InventoryScreen } from './features/inventory/InventoryScreen'
 import { ImportScreen } from './features/import-project/ImportScreen'
 
@@ -24,10 +24,10 @@ export function App() {
   if (view === 'report' && project) {
     return <InventoryScreen project={project} onExit={exit} onOpenGraph={() => setView('workspace')} />
   }
-  if (view === 'workspace') {
+  if (view === 'workspace' && project) {
     return (
       <Suspense fallback={<p role="status" className="grid h-dvh place-items-center bg-bg text-sm text-text-2">Loading workspace</p>}>
-        <Workspace project={project ?? demoProject()} onExit={exit} onShowReport={project && !project.demo ? () => setView('report') : undefined} onProjectSaved={(id) => setProject((p) => (p ? { ...p, savedId: id } : p))} />
+        <Workspace project={project} onExit={exit} onShowReport={() => setView('report')} onProjectSaved={(id) => setProject((p) => (p ? { ...p, savedId: id } : p))} />
       </Suspense>
     )
   }
@@ -55,7 +55,6 @@ export function App() {
       <main id="main">
         <ImportScreen
           focusHeading={navigated}
-          onLoadDemo={() => { setProject(demoProject()); setView('workspace') }}
           onIngested={(name, result) => { setProject(projectFromPipeline(name, result)); setView('report') }}
           onOpenProject={(p) => { setProject(p); setView('workspace') }}
         />

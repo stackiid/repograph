@@ -34,7 +34,7 @@ describe('SavedProjects', () => {
     expect(await axeViolations(container)).toEqual([])
     await userEvent.click(within(items[0]).getByRole('button', { name: 'Open' }))
     await waitFor(() => expect(onOpen).toHaveBeenCalled())
-    expect(onOpen.mock.calls[0][0]).toMatchObject({ name: 'newer', demo: false, savedId: expect.any(String) })
+    expect(onOpen.mock.calls[0][0]).toMatchObject({ name: 'newer', savedId: expect.any(String) })
     expect(onOpen.mock.calls[0][0].sources.size).toBeGreaterThan(0)
   })
 
@@ -83,7 +83,7 @@ describe('ProjectActions', () => {
 
   it('saves nothing until Save is pressed, and leaves source text out by default', async () => {
     const onSaved = vi.fn()
-    render(<ProjectActions project={sampleProject('shop')} onSaved={onSaved} />)
+    render(<ProjectActions project={sampleProject('shop')} onSaved={onSaved} getGraph={() => null} />)
     const panel = await open()
     expect(await projectStore.list()).toEqual([])
     expect(within(panel).getByRole('checkbox')).not.toBeChecked()
@@ -95,7 +95,7 @@ describe('ProjectActions', () => {
   })
 
   it('includes source text only when the box is ticked', async () => {
-    render(<ProjectActions project={sampleProject('shop')} onSaved={vi.fn()} />)
+    render(<ProjectActions project={sampleProject('shop')} onSaved={vi.fn()} getGraph={() => null} />)
     const panel = await open()
     await userEvent.click(within(panel).getByRole('checkbox'))
     await userEvent.click(within(panel).getByRole('button', { name: 'Save' }))
@@ -104,14 +104,14 @@ describe('ProjectActions', () => {
   })
 
   it('disables the source option when a project has no source text', async () => {
-    render(<ProjectActions project={{ ...sampleProject(), sources: null }} onSaved={vi.fn()} />)
+    render(<ProjectActions project={{ ...sampleProject(), sources: null }} onSaved={vi.fn()} getGraph={() => null} />)
     const panel = await open()
     expect(within(panel).getByRole('checkbox')).toBeDisabled()
     expect(within(panel).getByText(/opened without source text/i)).toBeInTheDocument()
   })
 
   it('moves focus into the panel, closes with Escape, and returns focus to the trigger', async () => {
-    render(<ProjectActions project={sampleProject()} onSaved={vi.fn()} />)
+    render(<ProjectActions project={sampleProject()} onSaved={vi.fn()} getGraph={() => null} />)
     const trigger = screen.getByRole('button', { name: /save to this browser/i })
     const panel = await open()
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
@@ -123,19 +123,21 @@ describe('ProjectActions', () => {
 
   it('reports storage failures in plain language', async () => {
     const spy = vi.spyOn(projectStore, 'save').mockRejectedValue(new DOMException('full', 'QuotaExceededError'))
-    render(<ProjectActions project={sampleProject()} onSaved={vi.fn()} />)
+    render(<ProjectActions project={sampleProject()} onSaved={vi.fn()} getGraph={() => null} />)
     const panel = await open()
     await userEvent.click(within(panel).getByRole('button', { name: 'Save' }))
     expect(await within(panel).findByText(/not enough browser storage/i)).toBeInTheDocument()
     spy.mockRestore()
   })
 
-  it('exports JSON that contains no source text, through a download', async () => {
+  it('exports JSON that contains no source text, chosen from the export menu', async () => {
     let exported: Blob | null = null
     vi.mocked(URL.createObjectURL).mockImplementation((b) => { exported = b as Blob; return 'blob:x' })
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
-    render(<ProjectActions project={sampleProject('shop')} onSaved={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: /export graph as json/i }))
+    render(<ProjectActions project={sampleProject('shop')} onSaved={vi.fn()} getGraph={() => null} />)
+    await userEvent.click(screen.getByRole('button', { name: /^export/i }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /json/i }))
+    expect(await screen.findByText(/exported shop\.repograph\.json/i)).toBeInTheDocument()
     expect(click).toHaveBeenCalled()
     const text = await exported!.text()
     expect(text).toContain('"format":"repograph-project"')
@@ -145,14 +147,14 @@ describe('ProjectActions', () => {
 
   it('keeps export available and explains when local storage is not', async () => {
     vi.stubGlobal('indexedDB', undefined)
-    render(<ProjectActions project={sampleProject()} onSaved={vi.fn()} />)
+    render(<ProjectActions project={sampleProject()} onSaved={vi.fn()} getGraph={() => null} />)
     const panel = await open()
     expect(within(panel).getByText(/still export the graph as a json file/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /export graph as json/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /^export/i })).toBeEnabled()
   })
 
   it('has no accessibility violations with the panel open', async () => {
-    const { container } = render(<ProjectActions project={sampleProject()} onSaved={vi.fn()} />)
+    const { container } = render(<ProjectActions project={sampleProject()} onSaved={vi.fn()} getGraph={() => null} />)
     await open()
     expect(await axeViolations(container)).toEqual([])
   })
@@ -167,7 +169,7 @@ describe('OpenGraphFile', () => {
     render(<OpenGraphFile onOpen={onOpen} />)
     await upload(JSON.stringify(toExport(sampleProject('shop'))))
     await waitFor(() => expect(onOpen).toHaveBeenCalled())
-    expect(onOpen.mock.calls[0][0]).toMatchObject({ name: 'shop', demo: false, sources: null })
+    expect(onOpen.mock.calls[0][0]).toMatchObject({ name: 'shop', sources: null })
   })
 
   it('lists plain-language problems for a file that is not a valid export', async () => {

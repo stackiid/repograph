@@ -2,9 +2,9 @@
 
 RepoGraph maps the relationships inside a JavaScript or TypeScript codebase. Import a ZIP of your project and see which files import which, find import cycles and unconnected files, trace the shortest import path between two files, and jump to the exact source line behind every relationship.
 
-It runs entirely in your browser. There is no server, no account, and no analytics.
+It runs entirely in your browser, on your own files. There is no server, no account, no analytics, and no sample or demo data: everything you see comes from a project you import.
 
-> **Status: pre-release (0.0.1).** All logic is covered by automated tests that pass in Node and jsdom (see [Testing](#testing)). The app has **not yet been run in a real browser, and it has not been deployed**. The Playwright end-to-end suite is written but has never been executed. See [docs/release-checklist.md](docs/release-checklist.md) for exactly what is and is not verified.
+> **Verification status (v1.0.0).** All logic is covered by 302 automated tests that pass in Node and jsdom (see [Testing](#testing)), and the PNG export has been rendered and inspected as real image files. The app has **not yet been run in a real browser, and it has not been deployed**. The Playwright end-to-end suite is written but has never been executed. See [docs/release-checklist.md](docs/release-checklist.md) for exactly what is and is not verified.
 
 ## What it does
 
@@ -15,15 +15,25 @@ It runs entirely in your browser. There is no server, no account, and no analyti
 | Resolve | Relative paths, extension probing, `index` files, and the TypeScript `./a.js` to `a.ts` convention. Case-sensitive. |
 | Report honestly | Unresolved imports, package imports, files that failed to parse, skipped files, and every exclusion are listed. Unresolved imports are never drawn as edges. |
 | Explore | Layered, folder-grouped, or force-directed layout. Search and filter. Directional highlighting. Cycles, unconnected files, and shortest import path. A source preview at the exact line. |
-| Keep | Export the graph as JSON, or save it to your browser's IndexedDB. Both only on request. |
+| Export | An **Export** menu offers **PNG image** (the whole graph, high resolution) and **JSON** (graph data you can reopen). More formats can be added to one list. |
+| Keep | Save a project to your browser's IndexedDB, or reopen an exported JSON file. Only on request. |
 
 ## Privacy and data
 
 - Your code is read and analyzed in your browser and is never uploaded. It is treated as text, never executed.
 - Nothing is stored unless you choose **Save locally**. Source text is stored only if you also tick a separate box. Saved projects can be deleted one by one or all at once.
-- JSON exports contain the file list, relationships, and diagnostics. They never contain source code.
+- JSON exports contain the file list, relationships, and diagnostics. PNG exports contain file names, folders, and counts. Neither contains source code.
 - Fonts are bundled, so loading the page makes no third-party request.
 - RepoGraph makes exactly one kind of optional network request: the **Check that it is public** button in the GitHub panel sends the owner and repository name to `api.github.com`. No token, cookies, or referrer are sent.
+
+## Exporting
+
+Open **Export** in the workspace header and choose a format.
+
+- **PNG image** draws the whole graph, not just the part on screen, and respects your current search and filters. The image is drawn directly from the graph data at up to 4 times the on-screen size, so text and lines stay sharp when you zoom in. A typical project comes out at around 8,000 pixels wide. It includes a title, counts, and a legend. The resolution is lowered only as far as needed to stay inside your browser's largest safe canvas (16,384 pixels on a side, 64 million pixels in total on desktop, less on phones), and the message after export says when that happened. A graph too large to read even then is refused with advice to filter it.
+- **JSON** saves the graph data, with no source code, so you can reopen it later.
+
+Adding another format means adding one entry to `EXPORT_FORMATS` in `src/features/export/formats.ts`. The menu is built from that list.
 
 ## Supported and unsupported
 
@@ -60,7 +70,7 @@ npm run preview    # serve the production build
 
 ## Testing
 
-`npm test` runs 244 tests across 14 files. They cover the archive reader (including unsafe paths and malformed archives), the parser and resolver, the graph algorithms and layouts, persistence and validation (including hostile input), the GitHub URL and API logic, and the user interface components. The interface tests render the real components in jsdom, including the full workspace with React Flow, and run axe-core accessibility checks. jsdom has no layout engine, so color contrast is verified separately against the design tokens, and layout, focus rings, and responsive behavior still need a real browser.
+`npm test` runs 302 tests across 17 files. They cover the archive reader (including unsafe paths and malformed archives), the parser and resolver, the graph algorithms and layouts, persistence and validation (including hostile input), the GitHub URL and API logic, the PNG export, and the user interface components. All test inputs are real ZIP projects run through the real analysis pipeline; the app itself contains no fixture or demo data. The PNG renderer is tested by drawing real images with a Node canvas and checking their dimensions and pixels. The interface tests render the real components in jsdom, including the full workspace with React Flow, and run axe-core accessibility checks. jsdom has no layout engine, so color contrast is verified separately against the design tokens, and layout, focus rings, and responsive behavior still need a real browser.
 
 ## Deploying to GitHub Pages
 
@@ -83,6 +93,7 @@ A live demo link is intentionally not included here, because no deployment has b
 
 - Not yet verified in a real browser or on GitHub Pages.
 - Graph rendering speed with thousands of nodes has not been measured in a browser. Algorithm timings are in `npm run bench`.
+- PNG export was verified by rendering with a Node canvas. Browser canvas behavior (font loading, size limits, memory) is handled defensively but not yet verified. Open an exported PNG from a real browser and check that the fonts match the app.
 - The layered layout uses a simple crossing-reduction pass, so dense graphs will show crossing edges.
 - A ZIP can declare a false size in its header. Real sizes are checked after unpacking, but a hostile archive could briefly use more memory than the configured budget.
 - Opening a very large JSON export parses it on the main thread.

@@ -27,7 +27,7 @@ ZIP file
   -> Workspace            aggregate edges, cycles, layout, filters, emphasis
 ```
 
-`ProjectData` is the one shape the UI consumes, for demo data, fresh imports, saved projects, and opened exports alike.
+`ProjectData` is the one shape the UI consumes, for fresh imports, saved projects, and opened exports alike.
 
 ## Key decisions
 
@@ -52,7 +52,30 @@ ZIP file
 | Graph | `core/graph/{model,algorithms,layout,layouts,fixture}.ts` |
 | Persistence | `core/persistence/{schema,validate,serialize,store}.ts` |
 | GitHub | `core/github/{parseRepoUrl,repoCheck}.ts` |
+| Export | `core/export/{scale,scene,draw}.ts`, `features/export/{formats,pngExport,ExportMenu}.ts*` |
 | Workspace | `features/graph-explorer/*`, `components/graph/*` |
+
+## Export
+
+The Export menu is built from a list of formats (`EXPORT_FORMATS` in `features/export/formats.ts`). Each entry has an id, a label, a description, and a `run` function that returns a message. To add a format, add one object to that list. The menu, keyboard handling, busy state, and result message need no changes.
+
+PNG export is a pure pipeline with a thin browser layer:
+
+```
+Workspace snapshot (files shown, positions on screen, edges, labels)
+  -> buildScene     positions and sizes of every shape, edge curves, label placement   (core, pure)
+  -> chooseScale    highest scale that fits the canvas limits, or a refusal            (core, pure)
+  -> drawScene      Canvas 2D drawing at the final size                                (core, pure)
+  -> renderPng      loads fonts, creates the canvas, encodes the blob                  (browser)
+```
+
+Decisions:
+
+- **Draw from data, not from the screen.** Capturing the DOM only sees what is rendered, and fails on large canvases. Drawing from the model exports the whole graph, is independent of the viewport and zoom, and draws text and lines at final size, so the image is sharp at any resolution.
+- **One drawing function, two canvases.** `drawScene` takes a small context interface, so the same code runs on a browser canvas and on a Node canvas. Tests render real PNG files with `@napi-rs/canvas` and check dimensions and pixels. That package is a dev dependency only.
+- **Resolution is chosen, not asked for.** The target is 4x. It is lowered only as far as the canvas limits require (desktop: 16,384 px per side and 64 million pixels; phones and low-memory devices: 16 million pixels) and never below 0.4x, where text stops being legible. The message after export reports the size and any reduction.
+- **Edge labels are placed greedily.** Labels repeat what line style and the legend already show, so an overlapping lower-priority label is dropped instead of printed unreadably.
+- **Neutral state.** The image shows file flags (in a cycle, unresolved, no relationships) but not the current selection, path, or cycle highlight.
 
 ## Candidate Content Security Policy
 

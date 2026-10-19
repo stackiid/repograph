@@ -102,7 +102,7 @@ describe('resolveImport', () => {
   })
 })
 
-describe('runPipeline on a fixture archive', () => {
+describe('runPipeline on a multi-file archive', () => {
   const zip = zipSync(Object.fromEntries(Object.entries({
     'app-main/package.json': '{}',
     'app-main/src/main.tsx': "import React from 'react'\nimport { App } from './App'\nimport './style.css'\nimport { gone } from './missing'\n",

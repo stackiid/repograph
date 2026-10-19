@@ -19,18 +19,18 @@ Do not tag a release or announce a deployment until every item under "Required b
 | 9 | Pan, zoom, fit, selection, search | Selection, search, and fit tested in jsdom. Pan and zoom are React Flow built-ins and untested here | **Not run** |
 | 10 | Inspector with imports and dependents | Component and workspace tests | Not run |
 | 11 | Layouts | Three layouts tested for determinism and structure; timings in `npm run bench` | Not run |
-| 12 | Demo project | Workspace tests | Not run |
+| 12 | ~~Demo project~~ | Removed in v1.0.0 by request. The app has no sample or demo data; all tests use real ZIPs through the real pipeline | n/a |
 | 13 | Responsive and keyboard-accessible | Keyboard and axe tests in jsdom. Responsive CSS unverified | **Not run** |
 | 14 | Errors and partial-analysis reporting | Pipeline, report, and status-bar tests | Not run |
 | 15 | Production build and Pages deployment | Build passes; `verify:subpath` passes; workflows written | **Not deployed** |
 
-Also built beyond 0.1: cycles, unconnected files, path tracing, source preview, JSON export and import, local saving, GitHub URL guidance.
+Also built beyond 0.1: cycles, unconnected files, path tracing, source preview, an Export menu with PNG and JSON, JSON import, local saving, GitHub URL guidance.
 
 ## Verified in this repository
 
 - [x] `npm run typecheck`: strict TypeScript, including the e2e files
 - [x] `npm run lint`
-- [x] `npm test`: 244 tests, 14 files
+- [x] `npm test`: 302 tests, 17 files (includes rendering real PNG files and checking their pixels)
 - [x] `npm run build`
 - [x] `npm run verify:subpath`: relative assets and CSS-referenced fonts resolve under a repository prefix with correct content types; no third-party URLs in the build
 - [x] Lockfile committed, package manager and Node version pinned (`packageManager`, `engines`, `.nvmrc`)
@@ -45,6 +45,7 @@ Also built beyond 0.1: cycles, unconnected files, path tracing, source preview, 
 - [ ] Manual accessibility pass from [accessibility.md](accessibility.md) (focus rings, keyboard walk-through, screen reader, mobile, zoom, forced colors).
 - [ ] Measure graph rendering with 1,000 and 5,000 files in a browser. Only algorithm timings exist so far.
 - [ ] Verify the GitHub API response parser against one real `200` response (the development environment was rate limited), and confirm the archive link works for a branch, a tag, and a commit.
+- [ ] **Open an exported PNG made in a real browser** and compare it with the app: fonts (Inter, IBM Plex Mono) must not have fallen back, text must be sharp when zoomed, and nothing may be cut off. Also try a large project to see the resolution-reduced message.
 - [ ] Capture real screenshots and add them to the README. None are included because none exist; do not mock them.
 - [ ] Decide on and enable the Content Security Policy in [architecture.md](architecture.md) after testing it.
 

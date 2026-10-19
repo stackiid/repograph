@@ -2,11 +2,10 @@ import type { ProjectData } from '../analysis/project'
 import { computeStats } from '../analysis/stats'
 import { FORMAT, SCHEMA_VERSION, type ProjectExport, type ProjectPayload } from './schema'
 
-export const GENERATOR = 'RepoGraph 0.0.1'
+export const GENERATOR = 'RepoGraph 1.0.0'
 
 /** Builds the export document from a real project. Copies known fields only and never includes source text. */
 export function toExport(project: ProjectData, now = new Date()): ProjectExport {
-  if (project.demo || !project.ingest) throw new Error('Demo data cannot be exported.')
   return {
     format: FORMAT,
     schemaVersion: SCHEMA_VERSION,
@@ -28,7 +27,6 @@ export function projectFromPayload(payload: ProjectPayload, sources: ReadonlyMap
   const countCode = (code: string) => payload.files.filter((f) => f.diagnostics.some((d) => d.code === code)).length
   return {
     name: payload.name,
-    demo: false,
     files: payload.files,
     relationships: payload.relationships,
     diagnostics: payload.diagnostics,
@@ -44,7 +42,7 @@ export function projectFromPayload(payload: ProjectPayload, sources: ReadonlyMap
   }
 }
 
-export function exportFileName(name: string): string {
+export function exportFileName(name: string, extension: 'json' | 'png' = 'json'): string {
   const safe = name.replace(/[^A-Za-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'project'
-  return `${safe}.repograph.json`
+  return `${safe}.repograph.${extension}`
 }

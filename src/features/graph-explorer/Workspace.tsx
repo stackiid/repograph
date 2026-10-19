@@ -8,7 +8,8 @@ import { GRAPH_COLORS } from '../../components/graph/graphTheme'
 import type { AppNode } from '../../components/graph/types'
 import { graphFiles, type ProjectData } from '../../core/analysis/project'
 import { buildAdjacency, findCycles, isolatedIds, shortestPath } from '../../core/graph/algorithms'
-import type { LayoutKind } from '../../core/graph/layouts'
+import type { ExportGraphInput } from '../../core/export/scene'
+import type { LayoutKind, LayoutLabel } from '../../core/graph/layouts'
 import type { Point } from '../../core/graph/layout'
 import { aggregateEdges, buildIndex, filterGraph, runtimeEdges } from '../../core/graph/model'
 import type { RelationshipType } from '../../core/types'
@@ -24,11 +25,16 @@ import { SourcePreview } from './SourcePreview'
 type Drawer = 'files' | 'inspector' | null
 const LAYOUT_NAMES: Record<LayoutKind, string> = { hierarchy: 'layered', folders: 'grouped by folder', force: 'force-directed' }
 
+/** Group headings follow the files that are shown, so a filtered view does not keep headings for hidden folders. */
+function visibleLabels(labels: LayoutLabel[], dirs: Set<string>, anyIsolated: boolean): LayoutLabel[] {
+  return labels.filter((l) => (l.isolated ? anyIsolated : l.dir === undefined || dirs.has(l.dir)))
+}
+
 interface WorkspaceProps {
   project: ProjectData
   onExit: () => void
-  /** Opens the import report. Not offered for demo data. */
-  onShowReport?: () => void
+  /** Opens the import report. */
+  onShowReport: () => void
   /** Called after the user saves the project to local browser storage. */
   onProjectSaved?: (id: string) => void
 }
@@ -143,8 +149,7 @@ function WorkspaceInner({ project, onExit, onShowReport, onProjectSaved }: Works
       })
     const visibleDirs = new Set(fileNodes.map((n) => n.data.dir))
     const anyIsolated = fileNodes.some((n) => isolated.has(n.id))
-    const labels = layout.result.labels
-      .filter((l) => (l.isolated ? anyIsolated : l.dir === undefined || visibleDirs.has(l.dir)))
+    const labels = visibleLabels(layout.result.labels, visibleDirs, anyIsolated)
       .map((l) => ({
         id: l.id, type: 'label' as const, position: { x: l.x, y: l.y }, data: { text: l.text },
         selectable: false, draggable: false, focusable: false, connectable: false, deletable: false,
@@ -263,6 +268,27 @@ function WorkspaceInner({ project, onExit, onShowReport, onProjectSaved }: Works
   const unresolved = relationships.filter((r) => r.resolution === 'unresolved').length
   const external = relationships.filter((r) => r.resolution === 'external').length
   const name = (id: string) => index.filesById.get(id)?.baseName ?? id
+  // Snapshot for image export: every file the filters show, at the positions on screen, not just the visible viewport.
+  const getExportGraph = (): ExportGraphInput | null => {
+    if (!layout.result || layout.computing) return null
+    const pos = layout.result.positions
+    const shown = files.filter((f) => filtered.nodeIds.has(f.id))
+    return {
+      projectName: project.name,
+      nodes: shown.map((f) => {
+        const p = dragged[f.id] ?? pos.get(f.id) ?? { x: 0, y: 0 }
+        return {
+          id: f.id, baseName: f.baseName, dir: f.parentDir, ext: f.extension, x: p.x, y: p.y,
+          imports: (index.outgoing.get(f.id) ?? []).length, dependents: (index.incoming.get(f.id) ?? []).length,
+          inCycle: cycleIds.has(f.id), isolated: isolated.has(f.id), unresolved: unresolvedByFile.get(f.id) ?? 0,
+        }
+      }),
+      edges: filtered.edges.map((e) => ({ sourceId: e.sourceId, targetId: e.targetId, type: e.type, typeOnly: e.typeOnly, count: e.relationships.length })),
+      labels: visibleLabels(layout.result.labels, new Set(shown.map((f) => f.parentDir)), shown.some((f) => isolated.has(f.id))).map((l) => ({ text: l.text, x: l.x, y: l.y })),
+      totals: { files: files.length, edges: allEdges.length, cycles: cycles.length, unresolved },
+      exportedAt: new Date(),
+    }
+  }
   const previewSource = preview ? project.sources?.get(preview.fileId) : undefined
 
   const panelBase = 'z-40 flex flex-col border-border bg-surface transition-transform duration-[var(--duration-base)] ease-[var(--ease-out)] max-md:fixed max-md:inset-y-0 md:static'
@@ -280,13 +306,10 @@ function WorkspaceInner({ project, onExit, onShowReport, onProjectSaved }: Works
           <FontAwesomeIcon icon={faArrowLeft} aria-hidden="true" /> <span className="hidden sm:inline">Import another project</span><span className="sm:hidden">Back</span>
         </button>
         <h1 ref={headingRef} tabIndex={-1} className="truncate font-mono text-sm font-medium focus:outline-none">{project.name}</h1>
-        {project.demo && <span className="shrink-0 rounded-sm border border-warning px-2 py-0.5 text-xs text-warning">Demo data</span>}
-        {onShowReport && (
-          <button type="button" onClick={onShowReport} className="flex min-h-10 shrink-0 items-center gap-2 rounded-sm px-2 text-sm text-text-2 hover:text-text">
-            <FontAwesomeIcon icon={faClipboardList} aria-hidden="true" /> <span className="hidden sm:inline">Import report</span>
-          </button>
-        )}
-        {!project.demo && <ProjectActions project={project} onSaved={(id) => onProjectSaved?.(id)} />}
+        <button type="button" onClick={onShowReport} className="flex min-h-10 shrink-0 items-center gap-2 rounded-sm px-2 text-sm text-text-2 hover:text-text">
+          <FontAwesomeIcon icon={faClipboardList} aria-hidden="true" /> <span className="hidden sm:inline">Import report</span>
+        </button>
+        <ProjectActions project={project} onSaved={(id) => onProjectSaved?.(id)} getGraph={getExportGraph} />
         <div className="ml-auto flex gap-2 md:hidden">
           <button type="button" onClick={() => setDrawer('files')} className="flex min-h-10 items-center gap-2 rounded-sm border border-border-strong px-3 text-sm text-text-2">
             <FontAwesomeIcon icon={faFolderTree} aria-hidden="true" /> Files
@@ -412,15 +435,11 @@ function WorkspaceInner({ project, onExit, onShowReport, onProjectSaved }: Works
         <span>Cycles: <span className={`font-mono ${cycles.length > 0 ? 'text-warning' : 'text-text'}`}>{cycles.length}</span></span>
         <span>Unresolved imports: <span className="font-mono text-text">{unresolved}</span></span>
         <span>Package imports: <span className="font-mono text-text">{external}</span></span>
-        {project.demo ? (
-          <span className="text-warning">Demo data, not from your files</span>
-        ) : (
-          <span className={project.analysis.filesFailed > 0 ? 'text-warning' : ''}>
-            {project.analysis.filesFailed > 0
-              ? `Analysis is partial: ${project.analysis.filesFailed} file${project.analysis.filesFailed === 1 ? '' : 's'} could not be parsed`
-              : `Parsed ${project.analysis.filesParsed.toLocaleString()} source files`}
-          </span>
-        )}
+        <span className={project.analysis.filesFailed > 0 ? 'text-warning' : ''}>
+          {project.analysis.filesFailed > 0
+            ? `Analysis is partial: ${project.analysis.filesFailed} file${project.analysis.filesFailed === 1 ? '' : 's'} could not be parsed`
+            : `Parsed ${project.analysis.filesParsed.toLocaleString()} source files`}
+        </span>
         <span>Layout: {LAYOUT_NAMES[layoutKind]}{layout.ms !== null ? `, ${layout.ms < 10 ? layout.ms.toFixed(1) : Math.round(layout.ms)} ms` : ''}</span>
         <span className="ml-auto hidden text-text-muted lg:inline">/ search, F fit, Esc clear</span>
       </footer>

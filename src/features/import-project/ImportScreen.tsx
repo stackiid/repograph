@@ -27,7 +27,6 @@ const FACTS = [
 ]
 
 interface Props {
-  onLoadDemo: () => void
   onIngested: (name: string, result: PipelineResult) => void
   onOpenProject: (project: ProjectData) => void
   /** True when the user arrived here from another screen, so the heading should take focus. */
@@ -36,7 +35,7 @@ interface Props {
 
 const DEFAULT_TEXT = DEFAULT_IGNORE_PATTERNS.join('\n')
 
-export function ImportScreen({ onLoadDemo, onIngested, onOpenProject, focusHeading = false }: Props) {
+export function ImportScreen({ onIngested, onOpenProject, focusHeading = false }: Props) {
   const headingRef = useFocusOnMount<HTMLHeadingElement>(focusHeading)
   const [exclusionText, setExclusionText] = useState(DEFAULT_TEXT)
   const ignorePatterns = useMemo(() => parsePatterns(exclusionText), [exclusionText])
@@ -76,16 +75,6 @@ export function ImportScreen({ onLoadDemo, onIngested, onOpenProject, focusHeadi
             </div>
           </details>
           <GitHubImport />
-          <div className="mt-6 border-t border-border pt-5">
-            <button
-              type="button"
-              onClick={onLoadDemo}
-              className="rounded-sm border border-accent px-4 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-raised"
-            >
-              Try the sample project
-            </button>
-            <p className="mt-2 text-sm text-text-muted">Opens the workspace with labeled demo data. No files are read.</p>
-          </div>
           <SavedProjects onOpen={onOpenProject} />
           <OpenGraphFile onOpen={onOpenProject} />
         </div>
@@ -100,7 +89,7 @@ export function ImportScreen({ onLoadDemo, onIngested, onOpenProject, focusHeadi
         ))}
       </section>
       <footer className="py-8 text-sm text-text-muted">
-        Version 0.0.1. The sample project uses demo data. Imported projects use your own files.
+        Version 1.0.0. Everything you see comes from files you provide.
       </footer>
     </div>
   )

@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { findCycles, buildAdjacency, isolatedIds, shortestPath } from './algorithms'
-import { DEMO_FILES, DEMO_RELATIONSHIPS } from './fixture'
+import { graphFiles } from '../analysis/project'
+import { storefrontProject } from '../../test/fixtures'
 import { FORCE_MAX_NODES, computeLayout, layoutFolders, layoutForce, layoutHierarchy } from './layouts'
 import { aggregateEdges } from './model'
 import { sourceWindow } from '../preview/sourceWindow'
 
+// Real analysis of a multi-file project, the same path an uploaded ZIP takes.
+const storefront = storefrontProject()
+const STORE_FILES = graphFiles(storefront.files, storefront.relationships)
+const STORE_RELATIONSHIPS = storefront.relationships
+
 const e = (s: string, t: string) => ({ sourceId: s, targetId: t })
 
 describe('findCycles', () => {
-  it('finds a two-file cycle in the demo fixture', () => {
-    const edges = aggregateEdges(DEMO_RELATIONSHIPS)
-    expect(findCycles(DEMO_FILES.map((f) => f.id), edges)).toEqual([['src/lib/api.ts', 'src/lib/cartStore.ts']])
+  it('finds the two-file cycle in the storefront project', () => {
+    const edges = aggregateEdges(STORE_RELATIONSHIPS)
+    expect(findCycles(STORE_FILES.map((f) => f.id), edges)).toEqual([['src/lib/api.ts', 'src/lib/cartStore.ts']])
   })
   it('finds longer cycles and reports separate components separately', () => {
     const cycles = findCycles(['a', 'b', 'c', 'd', 'e', 'f'], [e('a', 'b'), e('b', 'c'), e('c', 'a'), e('d', 'e'), e('e', 'd'), e('c', 'f')])
@@ -55,8 +61,8 @@ describe('isolatedIds', () => {
 })
 
 describe('layouts', () => {
-  const files = DEMO_FILES.map((f) => ({ id: f.id, parentDir: f.parentDir }))
-  const edges = aggregateEdges(DEMO_RELATIONSHIPS)
+  const files = STORE_FILES.map((f) => ({ id: f.id, parentDir: f.parentDir }))
+  const edges = aggregateEdges(STORE_RELATIONSHIPS)
   const input = { files, edges }
 
   it.each(['hierarchy', 'folders', 'force'] as const)('%s places every file at finite, deterministic coordinates', (kind) => {

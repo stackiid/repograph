@@ -13,6 +13,7 @@ Target: WCAG 2.2 AA for the start page, report screen, and workspace.
 | Escape order: drawer, then path or cycle, then selection | Workspace test | `Workspace.test.tsx` |
 | Focus moves to the heading on screen changes, into the save panel when it opens, and back to its trigger on Escape | Component tests | various |
 | Hostile source text renders as inert text | Source preview test | `explorer.test.tsx` |
+| Export menu: arrow, Home, End, Escape, Tab, click-away, focus return, busy state, announced result, axe in three states | Component tests | `export-ui.test.tsx` |
 
 Real bugs found by these checks and fixed: a malformed description list on the report screen, and a save panel that could not be dismissed from the keyboard.
 
@@ -30,7 +31,8 @@ These cannot be verified in jsdom, and none has been done yet:
 
 - [ ] Visible focus ring on every control, in every state, on a dark background.
 - [ ] Contrast in the browser (the Playwright suite runs axe with contrast, but has not been run).
-- [ ] Keyboard-only walk through: import, report, workspace, select, path, save, delete.
+- [ ] Keyboard-only walk through: import, report, workspace, select, path, export, save, delete.
+- [ ] Export menu with a screen reader: the result message is announced and focus returns to the Export button.
 - [ ] Tab order through the workspace, and whether canvas nodes are reachable and operable with Enter.
 - [ ] Screen reader pass (NVDA or VoiceOver) on the workspace and the save panel.
 - [ ] Mobile layouts at 360 px and 390 px: drawers, banners, touch target size, no horizontal scroll.

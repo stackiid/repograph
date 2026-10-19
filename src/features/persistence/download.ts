@@ -1,6 +1,6 @@
-/** Saves text as a file through the browser, without any server involved. */
-export function downloadText(fileName: string, text: string, mime = 'application/json') {
-  const url = URL.createObjectURL(new Blob([text], { type: mime }))
+/** Saves a blob as a file through the browser, without any server involved. */
+export function downloadBlob(fileName: string, blob: Blob) {
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = fileName
@@ -8,5 +8,10 @@ export function downloadText(fileName: string, text: string, mime = 'application
   document.body.append(a)
   a.click()
   a.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+  // Give the browser time to start the download before the temporary link is released.
+  window.setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}
+
+export function downloadText(fileName: string, text: string, mime = 'application/json') {
+  downloadBlob(fileName, new Blob([text], { type: mime }))
 }

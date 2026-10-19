@@ -18,7 +18,7 @@ const drop = userEvent.setup({ applyAccept: false })
 beforeEach(() => { analyze.mockReset() })
 
 describe('ImportScreen', () => {
-  const setup = () => render(<ImportScreen onLoadDemo={vi.fn()} onIngested={vi.fn()} onOpenProject={vi.fn()} />)
+  const setup = () => render(<ImportScreen onIngested={vi.fn()} onOpenProject={vi.fn()} />)
 
   it('explains privacy and limits in plain language', () => {
     setup()
@@ -33,11 +33,10 @@ describe('ImportScreen', () => {
     expect(await axeViolations(container)).toEqual([])
   })
 
-  it('opens the sample project from a labeled button', async () => {
-    const onLoadDemo = vi.fn()
-    render(<ImportScreen onLoadDemo={onLoadDemo} onIngested={vi.fn()} onOpenProject={vi.fn()} />)
-    await userEvent.click(screen.getByRole('button', { name: /try the sample project/i }))
-    expect(onLoadDemo).toHaveBeenCalledOnce()
+  it('offers no sample or demo data, only real inputs', () => {
+    setup()
+    expect(screen.queryByRole('button', { name: /sample|demo/i })).not.toBeInTheDocument()
+    expect(screen.getByText(/everything you see comes from files you provide/i)).toBeInTheDocument()
   })
 
   it('lets exclusion rules be edited and restored', async () => {
@@ -52,7 +51,7 @@ describe('ImportScreen', () => {
   })
 
   it('moves focus to the heading when the user returns from another screen', () => {
-    render(<ImportScreen onLoadDemo={vi.fn()} onIngested={vi.fn()} onOpenProject={vi.fn()} focusHeading />)
+    render(<ImportScreen onIngested={vi.fn()} onOpenProject={vi.fn()} focusHeading />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
   })
 })

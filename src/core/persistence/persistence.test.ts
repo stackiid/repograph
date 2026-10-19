@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import { strToU8, zipSync } from 'fflate'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { runPipeline } from '../analysis/pipeline'
-import { demoProject, projectFromPipeline, type ProjectData } from '../analysis/project'
+import { projectFromPipeline, type ProjectData } from '../analysis/project'
 import { DEFAULT_IGNORE_PATTERNS } from '../archive/ignore'
 import { DEFAULT_LIMITS } from '../archive/limits'
 import { exportFileName, projectFromPayload, toExport } from './serialize'
@@ -48,10 +48,6 @@ describe('export and validation', () => {
     const text = JSON.stringify(toExport(realProject()))
     expect(text).not.toContain('export const App')
     expect(text).not.toContain('"sources"')
-  })
-
-  it('refuses to export demo data', () => {
-    expect(() => toExport(demoProject())).toThrow()
   })
 
   it('rejects text that is not JSON, not an object, or not a RepoGraph file', () => {
@@ -218,10 +214,6 @@ describe('local project store', () => {
     expect(await store.list()).toEqual([])
   })
 
-  it('refuses to save demo data', async () => {
-    await expect(store.save(demoProject(), { includeSource: false })).rejects.toThrow()
-    expect(await store.list()).toEqual([])
-  })
 })
 
 describe('describeStorageError', () => {

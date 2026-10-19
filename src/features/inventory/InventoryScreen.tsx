@@ -26,7 +26,7 @@ interface Props { project: ProjectData; onExit: () => void; onOpenGraph: () => v
 export function InventoryScreen({ project, onExit, onOpenGraph }: Props) {
   const headingRef = useFocusOnMount<HTMLHeadingElement>()
   const { ingest, analysis, files, diagnostics, rootPrefix } = project
-  const stats = ingest!
+  const stats = ingest
   const rules = Object.entries(stats.ignoredBy).sort((a, b) => b[1] - a[1])
   const sorted = [...diagnostics].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
   const shown = sorted.slice(0, MAX_DIAGNOSTICS_SHOWN)

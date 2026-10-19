@@ -2,11 +2,10 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { demoProject } from '../../core/analysis/project'
-import { DEMO_RELATIONSHIPS } from '../../core/graph/fixture'
 import { aggregateEdges } from '../../core/graph/model'
 import { axeViolations } from '../../test/axe'
-import { sampleProject } from '../../test/fixtures'
+import { stubCanvas } from '../../test/canvas'
+import { sampleProject, storefrontProject } from '../../test/fixtures'
 import { Workspace } from './Workspace'
 
 // jsdom has no Worker, so the layout hook is replaced by a synchronous one that runs the same pure function.
@@ -20,29 +19,22 @@ vi.mock('../../hooks/useLayout', async () => {
   }
 })
 
-const setup = (project = demoProject(), extra: Partial<React.ComponentProps<typeof Workspace>> = {}) =>
-  render(<Workspace project={project} onExit={vi.fn()} {...extra} />)
+const setup = (project = storefrontProject(), extra: Partial<React.ComponentProps<typeof Workspace>> = {}) =>
+  render(<Workspace project={project} onExit={vi.fn()} onShowReport={vi.fn()} {...extra} />)
 const fileList = () => screen.getByRole('navigation', { name: 'File list' })
 const pick = (name: string) => userEvent.click(within(fileList()).getByRole('button', { name }))
 const status = () => screen.getAllByRole('status').find((el) => el.tagName === 'FOOTER')!
 const inspector = () => screen.getByRole('complementary', { name: 'Inspector' })
 
-describe('Workspace with demo data', () => {
-  it('labels the data as a demo and reports real counts', () => {
+describe('Workspace with a multi-file project', () => {
+  it('reports real counts from the analysis', () => {
     setup()
-    expect(screen.getByRole('heading', { level: 1, name: 'demo-storefront' })).toHaveFocus()
-    expect(screen.getByText('Demo data')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'storefront' })).toHaveFocus()
+    expect(screen.queryByText(/demo/i)).not.toBeInTheDocument()
     expect(status()).toHaveTextContent('Files: 14 of 14 shown')
     expect(status()).toHaveTextContent('Cycles: 1')
     expect(status()).toHaveTextContent('Unresolved imports: 1')
     expect(status()).toHaveTextContent('Layout: layered, 1.5 ms')
-  })
-
-  it('does not offer saving or exporting demo data', () => {
-    setup()
-    expect(screen.queryByRole('button', { name: /export graph as json/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /save to this browser/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /import report/i })).not.toBeInTheDocument()
   })
 
   it('renders a graph node for each file with a descriptive accessible name', async () => {
@@ -70,7 +62,7 @@ describe('Workspace with demo data', () => {
 
   it('hides re-export relationships when that filter is turned off', async () => {
     setup()
-    const all = aggregateEdges(DEMO_RELATIONSHIPS)
+    const all = aggregateEdges(storefrontProject().relationships)
     const reexports = all.filter((e) => e.type === 'reexport').length
     expect(reexports).toBeGreaterThan(0)
     expect(status()).toHaveTextContent(`Edges: ${all.length} of ${all.length} shown`)
@@ -158,11 +150,10 @@ describe('Workspace with demo data', () => {
 })
 
 describe('Workspace with an imported project', () => {
-  it('offers the report, export, and save controls and no demo label', async () => {
+  it('offers the report, export, and save controls', async () => {
     const onShowReport = vi.fn()
     setup(sampleProject('shop'), { onShowReport })
-    expect(screen.queryByText('Demo data')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /export graph as json/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^export/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /save to this browser/i })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /import report/i }))
     expect(onShowReport).toHaveBeenCalled()
@@ -189,5 +180,63 @@ describe('Workspace with an imported project', () => {
     expect(insights.getByRole('button', { name: 'src/lonely.ts' })).toBeInTheDocument()
     await userEvent.click(insights.getByText(/files with unresolved imports/i))
     await waitFor(() => expect(insights.getByRole('button', { name: /^src\/main\.tsx\W+unresolved imports:?\W*1$/ })).toBeInTheDocument())
+  })
+})
+
+describe('Workspace image export', () => {
+  const exportPng = async () => {
+    await userEvent.click(screen.getByRole('button', { name: /^export/i }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /png image/i }))
+  }
+
+  it('exports every file in the project as one image, not just what fits on screen', async () => {
+    const canvas = stubCanvas()
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    setup()
+    await exportPng()
+    expect(await screen.findByText(/exported storefront\.repograph\.png/i)).toBeInTheDocument()
+    const drawn = canvas.texts()
+    for (const name of ['main.tsx', 'App.tsx', 'routes.tsx', 'types.ts', 'Home.tsx', 'Cart.tsx', 'Checkout.tsx', 'index.ts', 'Header.tsx', 'ProductCard.tsx', 'useCart.ts', 'cartStore.ts', 'api.ts', 'format.ts']) {
+      expect(drawn).toContain(name)
+    }
+    expect(drawn).toContain('storefront')
+    expect(drawn).toContain('in a cycle')
+    expect(drawn).toContain('1 unresolved')
+    expect(click).toHaveBeenCalled()
+    canvas.restore()
+  })
+
+  it('exports only the files the current filters show, and says so', async () => {
+    const canvas = stubCanvas()
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    setup()
+    await userEvent.type(screen.getByLabelText('Search files'), 'pages/')
+    await exportPng()
+    expect(await screen.findByText(/3 of 14 files that match your filters/i)).toBeInTheDocument()
+    const drawn = canvas.texts()
+    expect(drawn).toEqual(expect.arrayContaining(['Home.tsx', 'Cart.tsx', 'Checkout.tsx']))
+    expect(drawn).not.toContain('api.ts')
+    expect(drawn.some((t) => /3 of 14 files shown \(filtered view\)/.test(t))).toBe(true)
+    canvas.restore()
+  })
+
+  it('includes files moved by the user at their new positions', async () => {
+    const canvas = stubCanvas()
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    setup()
+    await userEvent.selectOptions(screen.getByLabelText('Layout'), 'folders')
+    await exportPng()
+    expect(await screen.findByText(/exported storefront\.repograph\.png/i)).toBeInTheDocument()
+    expect(canvas.texts().some((t) => /^src\/pages \(3\)$/.test(t))).toBe(true)
+    canvas.restore()
+  })
+
+  it('reports a clear message when nothing matches the filters', async () => {
+    const canvas = stubCanvas()
+    setup()
+    await userEvent.type(screen.getByLabelText('Search files'), 'zzz-no-match')
+    await exportPng()
+    expect(await screen.findByText(/no files to export/i)).toBeInTheDocument()
+    canvas.restore()
   })
 })

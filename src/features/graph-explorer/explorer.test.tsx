@@ -206,7 +206,7 @@ describe('Inspector', () => {
     expect(await axeViolations(container)).toEqual([])
   })
 
-  it('finds the demo cycle the same way the workspace does', () => {
+  it('finds the runtime cycle the same way the workspace does', () => {
     const ids = files.map((f) => f.id)
     expect(findCycles(ids, runtimeEdges(edges))).toEqual([['src/App.tsx', 'src/util.ts']])
   })

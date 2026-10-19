@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { axeViolations } from './helpers'
+import { axeViolations, storefrontZip } from './helpers'
 
 // Runs in the "mobile" project (Pixel 7 emulation).
 test('start page does not scroll sideways on a phone', async ({ page }) => {
@@ -11,7 +11,8 @@ test('start page does not scroll sideways on a phone', async ({ page }) => {
 
 test('workspace panels open as drawers, close with Escape, and stay out of the tab order when closed', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: /try the sample project/i }).click()
+  await page.getByLabel(/drop a zip of your project here/i).setInputFiles({ name: 'storefront.zip', mimeType: 'application/zip', buffer: storefrontZip() })
+  await page.getByRole('button', { name: /explore the graph/i }).click()
   await expect(page.getByRole('complementary', { name: /files and filters/i })).toHaveAttribute('inert', '')
   await page.getByRole('button', { name: 'Files', exact: true }).click()
   await expect(page.getByRole('complementary', { name: /files and filters/i })).not.toHaveAttribute('inert', '')
